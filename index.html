@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>《黑暗公爵府的勇者开局》官方网站 | 在线沉浸式阅读器与全人物图鉴</title>
+  <meta name="description" content="西幻暗黑权谋 × 至高因果律主宰 × 纯爱救赎修罗场！全五卷精修版及官方番外在线阅读，内置全角色高清立绘档案与四周排期互动模拟器。">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Google Fonts for exquisite Chinese Serif & Sans Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Ambient Background Lighting -->
+  <div class="bg-ambience" aria-hidden="true">
+    <div class="ambient-orb orb-gold"></div>
+    <div class="ambient-orb orb-purple"></div>
+  </div>
+
+  <!-- Site Navigation Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="#home" class="logo-brand">
+        <div class="logo-icon">👑</div>
+        <div class="logo-text">
+          <h1>黑暗公爵府的勇者开局</h1>
+          <p>ASTREA DUKE'S HERO AWAKENING</p>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="nav-menu" id="navMenu">
+        <a href="#home" class="nav-link active"><span>🏰</span> 首页</a>
+        <a href="#reader" class="nav-link"><span>📖</span> 小说阅读</a>
+        <a href="#characters" class="nav-link"><span>✨</span> 角色图鉴</a>
+        <a href="#schedule" class="nav-link"><span>📅</span> 四周排期</a>
+        <a href="#cg" class="nav-link"><span>🎨</span> 名场面CG</a>
+        <a href="#lore" class="nav-link"><span>📜</span> 世界观设定</a>
+      </nav>
+
+      <!-- Header Action Items -->
+      <div class="header-actions">
+        <button id="quickReadBtn" class="btn-quick-read" title="立即进入阅读模式">
+          <span>📖</span> <span class="hide-mobile">开始阅读</span>
+        </button>
+
+        <!-- Theme Selector Dropdown -->
+        <div class="theme-dropdown">
+          <button id="themeToggleBtn" class="btn-icon" aria-label="切换阅读主题" title="切换视觉主题">
+            🌓
+          </button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-opt-btn active" data-theme="dark">🌌 暗黑深渊</button>
+            <button class="theme-opt-btn" data-theme="sepia">📜 羊皮古卷</button>
+            <button class="theme-opt-btn" data-theme="midnight">🌠 星河夜幕</button>
+            <button class="theme-opt-btn" data-theme="light">☀️ 晨曦圣光</button>
+          </div>
+        </div>
+
+        <!-- Mobile Hamburger Toggle -->
+        <button id="mobileMenuToggle" class="btn-icon mobile-toggle" aria-label="展开导航菜单">
+          ☰
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Website Content -->
+  <main>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <div class="badge-row">
+            <span class="hero-badge">西幻暗黑权谋</span>
+            <span class="hero-badge badge-purple">多元宇宙至高主宰</span>
+            <span class="hero-badge">诸天唯八后宫</span>
+            <span class="hero-badge badge-purple">100% 甜爽大圆满</span>
+          </div>
+
+          <h2 class="hero-title">
+            穿成公爵府两岁幼子<br>
+            <span class="highlight">反手执掌多元因果律！</span>
+          </h2>
+
+          <p class="hero-subtitle">
+            蓝星孤儿穿越异界，开局竟是冷血母亲灌下的淬毒圣水与教廷死局？两岁潜伏伪装提线木偶，六岁献沉香木偶破万年死咒，十二岁虚空拐父！待神魔降临之日，奥尔多斯携手八位绝色妻子，相视一笑，打响终焉之指！
+          </p>
+
+          <div class="hero-stats">
+            <div class="stat-item">
+              <span class="stat-number">20万+</span>
+              <span class="stat-label">全本精修字数</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">17 章</span>
+              <span class="stat-label">全卷含官方后日谈</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">8 位</span>
+              <span class="stat-label">创世法则神明娇妻</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">13 张</span>
+              <span class="stat-label">高精全身体立绘</span>
+            </div>
+          </div>
+
+          <div class="hero-actions">
+            <button id="heroStartBtn" class="btn-primary">
+              <span>🚀</span> 从第一章开始阅读
+            </button>
+            <button id="heroContinueBtn" class="btn-secondary">
+              <span>📖</span> 继续阅读
+            </button>
+            <a href="#characters" class="btn-secondary">
+              <span>🎨</span> 探索角色图鉴
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Featured Card / Cover Preview -->
+        <div class="hero-card-preview">
+          <div class="cover-card">
+            <img src="portraits/01_奥尔多斯_Aldous.png" alt="奥尔多斯·冯·阿斯特雷亚" />
+            <div class="cover-glass-overlay">
+              <h3>奥尔多斯 · 创世主宰</h3>
+              <p>“只要给我换取足够的发育时间……棋手迟早得跪下来看我脸色。”</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Immersive Novel Reader Section -->
+    <section id="reader" class="reader-section">
+      <div class="section-header">
+        <span class="section-tag">ONLINE NOVEL READER</span>
+        <h2 class="section-title">沉浸式小说阅读器</h2>
+        <p class="section-desc">全五卷十六正章 + 官方独家番外后日谈 · 支持多端自适应与个性化排版</p>
+      </div>
+
+      <div class="reader-container">
+        <!-- Sidebar Drawer (Table of Contents) -->
+        <aside class="reader-sidebar" id="readerSidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-title">
+              <span>📜</span> 章节目录 (17)
+            </div>
+            <button id="mobileSidebarToggle" class="btn-icon mobile-toggle" style="width:30px;height:30px;" aria-label="关闭目录">✕</button>
+          </div>
+
+          <input type="text" id="chapterFilterInput" class="chapter-filter-input" placeholder="🔍 快速搜索章节或关键词..." />
+
+          <div class="chapter-list-scroll" id="chapterList">
+            <!-- Dynamically populated chapters -->
+          </div>
+        </aside>
+
+        <!-- Reader Main Viewport -->
+        <div class="reader-main">
+          <!-- Reader Toolbar -->
+          <div class="reader-toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn" id="prevChapterBtn" title="上一章">⏮ 上一章</button>
+              <button class="toolbar-btn" id="nextChapterBtn" title="下一章">下一章 ⏭</button>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-btn" id="fontDecBtn" title="缩小字号">A-</button>
+              <span id="fontValLabel" style="font-size:0.8rem;color:var(--text-muted);min-width:34px;text-align:center;">18px</span>
+              <button class="toolbar-btn" id="fontIncBtn" title="放大字号">A+</button>
+              <button class="toolbar-btn" id="fontToggleBtn" title="字体风格切换">典雅宋体</button>
+              <button class="toolbar-btn hide-mobile" id="widthToggleBtn" title="版心宽度">宽度: 舒适</button>
+            </div>
+          </div>
+
+          <!-- Reader Article Paper -->
+          <article class="reader-article-card" id="readerArticle">
+            <!-- Dynamically loaded chapter content -->
+          </article>
+
+          <!-- Bottom Navigation Footer -->
+          <div class="reader-nav-footer">
+            <button class="btn-chapter-nav" id="prevChapterBottomBtn">⏮ 上一章</button>
+            <a href="#reader" class="btn-chapter-nav">⬆ 回到顶部</a>
+            <button class="btn-chapter-nav" id="nextChapterBottomBtn">下一章 ⏭</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Character Archive Section -->
+    <section id="characters" class="character-section">
+      <div class="section-header">
+        <span class="section-tag">CHARACTERS & PORTRAITS</span>
+        <h2 class="section-title">全人物角色图鉴与立绘</h2>
+        <p class="section-desc">包含全书 13 位核心人物高清全身体立绘、详细数值面板、三围身形与人物小传</p>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="char-filter-tabs">
+        <button class="filter-tab active" data-filter="all">全部人物 (13)</button>
+        <button class="filter-tab" data-filter="protagonist">核心主角 (1)</button>
+        <button class="filter-tab" data-filter="harem">八大娇妻 (8)</button>
+        <button class="filter-tab" data-filter="family">公爵府亲族 (4)</button>
+      </div>
+
+      <!-- Character Card Grid -->
+      <div class="char-grid" id="charGrid">
+        <!-- Dynamically rendered character cards -->
+      </div>
+
+      <!-- Future Nine Kids Special Section -->
+      <div class="nine-kids-container">
+        <div class="kids-title-row">
+          <span class="section-tag">EPILOGUE TIME LEAP</span>
+          <h3 style="font-size:1.6rem;font-weight:800;color:var(--gold-light);">十年后穿越而来的“未来九子”</h3>
+          <p style="font-size:0.9rem;color:var(--text-secondary);margin-top:0.35rem;">
+            被卡奥斯的“七彩斑斓虚无弹”炸穿时空长河、集体空降公爵府草坪的九个熊孩子（6~10岁）
+          </p>
+        </div>
+        <div class="kids-grid" id="nineKidsGrid">
+          <!-- Dynamically populated kid cards -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Schedule Matrix Section -->
+    <section id="schedule" class="schedule-section">
+      <div class="section-header">
+        <span class="section-tag">HARMONIOUS HAREM LAWS</span>
+        <h2 class="section-title">四周循环排期表互动系统</h2>
+        <p class="section-desc">经过奥尔多斯与八位妻子精密推演的四维和谐排期法则，达成100%全员幸福指数</p>
+      </div>
+
+      <div class="schedule-card">
+        <div class="schedule-tabs-row" id="scheduleTabs">
+          <!-- Dynamic week tabs -->
+        </div>
+
+        <div class="schedule-viewport" id="scheduleViewport">
+          <!-- Dynamic schedule day cards -->
+        </div>
+
+        <!-- Math Strike Box -->
+        <div class="math-strike-box" id="mathStrikeBox">
+          <!-- Dynamic Math strike comparison -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene CG Storyboards Section -->
+    <section id="cg" class="cg-section">
+      <div class="section-header">
+        <span class="section-tag">CINEMATIC STORYBOARDS</span>
+        <h2 class="section-title">全书13大名场面CG分镜</h2>
+        <p class="section-desc">包含全五卷高光名场面与后日谈大团圆分镜设计，采用角色参考图（Reference Image）模式精确构筑</p>
+      </div>
+
+      <div class="cg-grid" id="cgGrid">
+        <!-- Dynamically rendered CG cards -->
+      </div>
+    </section>
+
+    <!-- Lore & Worldbuilding Section -->
+    <section id="lore" class="lore-section">
+      <div class="section-header">
+        <span class="section-tag">WORLD ARCHITECTURE</span>
+        <h2 class="section-title">世界观与创世法则设定集</h2>
+        <p class="section-desc">多元宇宙至高秩序、阿斯特雷亚公爵府铁律与诸天神性阶梯</p>
+      </div>
+
+      <div class="lore-grid">
+        <div class="lore-card">
+          <h3><span>🌌</span> 八大原初创世本源</h3>
+          <ul class="lore-list">
+            <li><strong>空间之弦</strong>：奥尔多斯本命法则，无视距离置换与多维掌控</li>
+            <li><strong>神圣救赎</strong>：正妻莉莉丝执掌，净化一切污秽与破晓守护</li>
+            <li><strong>深渊寂灭</strong>：二夫人卡娅莉丝执掌，万物枯朽与绝对毁灭</li>
+            <li><strong>皇道守护</strong>：三夫人艾莉西亚执掌，人皇血脉与时空守护</li>
+            <li><strong>真龙伟力</strong>：四夫人伊琳娜执掌，太古肉身极致与物质支配</li>
+            <li><strong>生命繁衍</strong>：五夫人西尔维娅执掌，世界树生命之泉与万物复苏</li>
+            <li><strong>混沌归墟</strong>：六夫人厄里斯执掌，原初概念泯灭与虚无同化</li>
+            <li><strong>文明造物</strong>：七夫人林夏执掌，科技维度跨越与概念构造</li>
+            <li><strong>至高因果</strong>：八夫人奥尔黛丝执掌，因果律双生闭环</li>
+          </ul>
+        </div>
+
+        <div class="lore-card">
+          <h3><span>🛡️</span> 公爵府防绿四条铁律</h3>
+          <ul class="lore-list">
+            <li><strong>第一条【绝对专一律】</strong>：单人专属陪伴日内，任何其他妻子不得以“偶遇”、“送夜宵”闯入主卧。</li>
+            <li><strong>第二条【自由约会律】</strong>：第二周四对妻子自由配对，奥尔多斯悠闲喝茶观战。</li>
+            <li><strong>第三条【双生合璧律】</strong>：第三周奥尔多斯与奥尔黛丝携手陪伴七位妻子，双倍恩宠。</li>
+            <li><strong>第四条【创世度假律】</strong>：第四周为双生主宰专属蜜月期，万界海滩享受无熊孩子宁静。</li>
+          </ul>
+        </div>
+
+        <div class="lore-card">
+          <h3><span>⚡</span> 境界与战力天梯</h3>
+          <ul class="lore-list">
+            <li><strong>凡俗极限 (1~10)</strong>：普通成年人类均值约为 10。两岁奥尔多斯精神即达 18.5。</li>
+            <li><strong>高阶超凡 (100~300)</strong>：如铁血主母克莱尔（暗影大法师，精神 220）。</li>
+            <li><strong>传奇圣域 (400~800)</strong>：如北境孤狼雷恩公爵、暗影之王修尔（敏捷 850）。</li>
+            <li><strong>真神本源 (800~1500)</strong>：八位神明妻子执掌法则本源（莉莉丝、卡娅莉丝、伊琳娜等）。</li>
+            <li><strong>多元主宰 (99999+)</strong>：奥尔多斯与奥尔黛丝，全知全能，轻打响指即可重构万象时空。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modern Dialog: Character Full Card Modal (with light-dismiss closedby="any") -->
+  <dialog id="charModal" closedby="any" aria-labelledby="modalTitle">
+    <div class="modal-inner-card" id="modalContent">
+      <!-- Populated dynamically via openCharacterModal -->
+    </div>
+    <button class="modal-close-btn" id="modalCloseBtn" aria-label="关闭窗口">✕</button>
+  </dialog>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="logo-brand">
+        <div class="logo-icon">👑</div>
+        <div class="logo-text">
+          <h1>黑暗公爵府的勇者开局</h1>
+          <p>ASTREA DUKE'S HERO AWAKENING</p>
+        </div>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#home">首页</a>
+        <a href="#reader">在线阅读</a>
+        <a href="#characters">角色立绘</a>
+        <a href="#schedule">四周排期</a>
+        <a href="#cg">名场面CG</a>
+        <a href="#lore">设定集</a>
+      </div>
+
+      <div class="footer-copyright">
+        <p>© 2026 《黑暗公爵府的勇者开局》官方网站 · 原案：Aldous ｜ 执笔精修：Antigravity</p>
+        <p style="margin-top:0.35rem;font-size:0.75rem;">西幻暗黑权谋 · 至高因果律主宰 · 纯爱救赎修罗场 · 全书大圆满</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts: Data Modules & Core Controller -->
+  <script src="js/novelData.js"></script>
+  <script src="js/characterData.js"></script>
+  <script src="js/cgData.js"></script>
+  <script src="js/scheduleData.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

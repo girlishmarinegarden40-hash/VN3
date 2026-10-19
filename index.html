@@ -42,6 +42,13 @@
 
       <!-- Header Action Items -->
       <div class="header-actions">
+        <!-- Header Bookmark Button -->
+        <button id="navBookmarkBtn" class="btn-nav-bookmark" title="点击跳回最近阅读进度">
+          <span class="bookmark-icon-dot"></span>
+          <span>🔖</span>
+          <span id="navBookmarkLabel" class="hide-mobile">书签: 第1章</span>
+        </button>
+
         <button id="quickReadBtn" class="btn-quick-read" title="立即进入阅读模式">
           <span>📖</span> <span class="hide-mobile">开始阅读</span>
         </button>
@@ -165,11 +172,20 @@
           <!-- Reader Toolbar -->
           <div class="reader-toolbar">
             <div class="toolbar-group">
+              <button class="toolbar-btn" id="toolbarDrawerBtn" title="打开/关闭章节目录">
+                <span>📋</span> <span class="hide-mobile">目录</span>
+              </button>
               <button class="toolbar-btn" id="prevChapterBtn" title="上一章">⏮ 上一章</button>
+              <button class="toolbar-btn chapter-picker-trigger" id="openChapterPickerBtn" title="快速切换章节">
+                <span>📚</span> <span id="toolbarChapterTitle">快速选章 ▾</span>
+              </button>
               <button class="toolbar-btn" id="nextChapterBtn" title="下一章">下一章 ⏭</button>
             </div>
 
             <div class="toolbar-group">
+              <button class="toolbar-btn btn-tts-trigger" id="toolbarTtsBtn" title="开启AI智能语音朗读">
+                <span class="tts-btn-icon">🎧</span> <span id="toolbarTtsLabel">语音朗读</span>
+              </button>
               <button class="toolbar-btn" id="fontDecBtn" title="缩小字号">A-</button>
               <span id="fontValLabel" style="font-size:0.8rem;color:var(--text-muted);min-width:34px;text-align:center;">18px</span>
               <button class="toolbar-btn" id="fontIncBtn" title="放大字号">A+</button>
@@ -322,6 +338,105 @@
     </div>
     <button class="modal-close-btn" id="modalCloseBtn" aria-label="关闭窗口">✕</button>
   </dialog>
+
+  <!-- Modern Dialog: Quick Chapter Selector Modal (with light-dismiss closedby="any") -->
+  <dialog id="chapterPickerModal" closedby="any" aria-labelledby="chapterModalTitle">
+    <div class="chapter-modal-card">
+      <div class="chapter-modal-header">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="font-size:1.3rem;">📚</span>
+          <h3 id="chapterModalTitle">快速选章目录 (17)</h3>
+        </div>
+        <button class="modal-close-btn" id="closeChapterModalBtn" aria-label="关闭窗口">✕</button>
+      </div>
+
+      <div class="chapter-modal-search-box">
+        <input type="text" id="modalChapterSearch" class="chapter-filter-input" placeholder="🔍 快速搜索章节名称或关键词..." autofocus />
+      </div>
+
+      <div class="chapter-modal-body" id="modalChapterGrid">
+        <!-- Dynamically populated volumes & chapters -->
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Floating Voice Read-Aloud Audio Player Widget (TTS) -->
+  <aside class="tts-player-bar hidden" id="ttsPlayerBar" aria-label="AI智能语音朗读播放器">
+    <div class="tts-inner-wrap">
+      <!-- Visualizer & Voice Badge -->
+      <div class="tts-brand-block">
+        <div class="tts-visualizer" id="ttsVisualizer" aria-hidden="true">
+          <span class="v-bar bar-1"></span>
+          <span class="v-bar bar-2"></span>
+          <span class="v-bar bar-3"></span>
+          <span class="v-bar bar-4"></span>
+        </div>
+        <div class="tts-info-block">
+          <div class="tts-badge-row">
+            <span class="tts-status-badge" id="ttsStatusBadge">🎧 准备就绪</span>
+            <span class="tts-para-count" id="ttsParaCount">段落 1 / --</span>
+          </div>
+          <div class="tts-voice-title" id="ttsVoiceTitle">声线：👑 沉稳男声 (奥尔多斯)</div>
+        </div>
+      </div>
+
+      <!-- Playback Controls -->
+      <div class="tts-controls">
+        <button class="btn-tts-ctrl" id="ttsPrevParaBtn" title="上一段" aria-label="上一段">⏮</button>
+        <button class="btn-tts-play" id="ttsPlayPauseBtn" title="播放/暂停" aria-label="播放或暂停">
+          <span id="ttsPlayIcon">▶</span>
+        </button>
+        <button class="btn-tts-ctrl" id="ttsNextParaBtn" title="下一段" aria-label="下一段">⏭</button>
+        <button class="btn-tts-ctrl" id="ttsStopBtn" title="停止朗读" aria-label="停止朗读">⏹</button>
+      </div>
+
+      <!-- Voice Quick Switch: 男声 vs 女神音 -->
+      <div class="tts-voice-toggles" id="ttsVoiceToggles" role="group" aria-label="声线快速切换">
+        <button type="button" class="voice-toggle-btn active" id="voiceMaleBtn" data-mode="male" title="切换为男主·奥尔多斯沉稳男声">
+          <span>👑</span> 男声
+        </button>
+        <button type="button" class="voice-toggle-btn" id="voiceFemaleBtn" data-mode="female" title="切换为神明娇妻·空灵女神声线">
+          <span>✨</span> 女神音
+        </button>
+      </div>
+
+      <!-- Advanced Selectors: System Voice & Speed -->
+      <div class="tts-selects-row">
+        <select id="ttsVoiceSelect" class="tts-dropdown-select" title="自定义系统发音人">
+          <option value="auto">🎙️ 自动最优发音人</option>
+        </select>
+
+        <select id="ttsRateSelect" class="tts-dropdown-select tts-rate-select" title="朗读语速">
+          <option value="0.8">0.8x 舒缓</option>
+          <option value="1.0" selected>1.0x 标准</option>
+          <option value="1.2">1.2x 畅听</option>
+          <option value="1.5">1.5x 疾速</option>
+        </select>
+      </div>
+
+      <!-- Close Button -->
+      <button class="btn-tts-close" id="ttsCloseBtn" title="收起播放器" aria-label="收起播放器">✕</button>
+    </div>
+  </aside>
+
+  <!-- Floating Memory Bookmark Widget -->
+  <aside class="floating-bookmark-bar" id="floatingBookmark" aria-label="最近阅读记忆书签">
+    <div class="bookmark-pulse-dot"></div>
+    <div class="bookmark-content-box">
+      <div class="bookmark-top-row">
+        <span class="bookmark-badge">🔖 记忆书签</span>
+        <span class="bookmark-pct" id="floatingBookmarkPercent">已读 0%</span>
+      </div>
+      <div class="bookmark-ch-name" id="floatingBookmarkTitle">第一章：铅灰雨夜...</div>
+    </div>
+    <button class="btn-bookmark-jump" id="floatingBookmarkJumpBtn" title="点击立即跳回此章节及阅读进度">
+      <span>⚡ 跳回阅读</span>
+    </button>
+    <button class="btn-bookmark-dismiss" id="dismissBookmarkBtn" title="收起书签" aria-label="收起书签">✕</button>
+  </aside>
+
+  <!-- Toast Notification -->
+  <div class="toast-notification" id="toastNotification" role="alert" aria-live="assertive"></div>
 
   <!-- Site Footer -->
   <footer class="site-footer">

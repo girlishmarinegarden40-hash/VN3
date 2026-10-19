@@ -27,8 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore Theme
   applyTheme(readerSettings.theme);
 
-  // Restore saved chapter
-  const savedChapterId = parseInt(localStorage.getItem('astrea_last_chapter_id') || '1', 10);
+  // Restore saved chapter (prioritize bookmark over last chapter id)
+  const savedChapterId = parseInt(
+    localStorage.getItem('astrea_bookmark_chapter_id') ||
+    localStorage.getItem('astrea_last_chapter_id') || '1',
+    10
+  );
   const foundIndex = novelData.chapters.findIndex(c => c.id === savedChapterId);
   if (foundIndex !== -1) {
     currentChapterIndex = foundIndex;
@@ -59,21 +63,73 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
   const readerSidebar = document.getElementById('readerSidebar');
 
-  // Reader Toolbar buttons
+  // Reader Toolbar & Chapter Picker Elements
+  const toolbarDrawerBtn = document.getElementById('toolbarDrawerBtn');
+  const openChapterPickerBtn = document.getElementById('openChapterPickerBtn');
+  const toolbarChapterTitle = document.getElementById('toolbarChapterTitle');
   const fontDecBtn = document.getElementById('fontDecBtn');
   const fontIncBtn = document.getElementById('fontIncBtn');
   const fontValLabel = document.getElementById('fontValLabel');
   const fontToggleBtn = document.getElementById('fontToggleBtn');
   const widthToggleBtn = document.getElementById('widthToggleBtn');
 
+  // Modern Modal & Bookmark Elements
+  const chapterPickerModal = document.getElementById('chapterPickerModal');
+  const closeChapterModalBtn = document.getElementById('closeChapterModalBtn');
+  const modalChapterSearch = document.getElementById('modalChapterSearch');
+  const modalChapterGrid = document.getElementById('modalChapterGrid');
+
+  const navBookmarkBtn = document.getElementById('navBookmarkBtn');
+  const navBookmarkLabel = document.getElementById('navBookmarkLabel');
+  const floatingBookmark = document.getElementById('floatingBookmark');
+  const floatingBookmarkPercent = document.getElementById('floatingBookmarkPercent');
+  const floatingBookmarkTitle = document.getElementById('floatingBookmarkTitle');
+  const floatingBookmarkJumpBtn = document.getElementById('floatingBookmarkJumpBtn');
+  const dismissBookmarkBtn = document.getElementById('dismissBookmarkBtn');
+  const toastNotification = document.getElementById('toastNotification');
+
+  // AI TTS Voice Audio Player Elements
+  const toolbarTtsBtn = document.getElementById('toolbarTtsBtn');
+  const toolbarTtsLabel = document.getElementById('toolbarTtsLabel');
+  const ttsPlayerBar = document.getElementById('ttsPlayerBar');
+  const ttsVisualizer = document.getElementById('ttsVisualizer');
+  const ttsStatusBadge = document.getElementById('ttsStatusBadge');
+  const ttsParaCount = document.getElementById('ttsParaCount');
+  const ttsVoiceTitle = document.getElementById('ttsVoiceTitle');
+  const ttsPrevParaBtn = document.getElementById('ttsPrevParaBtn');
+  const ttsPlayPauseBtn = document.getElementById('ttsPlayPauseBtn');
+  const ttsPlayIcon = document.getElementById('ttsPlayIcon');
+  const ttsNextParaBtn = document.getElementById('ttsNextParaBtn');
+  const ttsStopBtn = document.getElementById('ttsStopBtn');
+  const voiceMaleBtn = document.getElementById('voiceMaleBtn');
+  const voiceFemaleBtn = document.getElementById('voiceFemaleBtn');
+  const ttsVoiceSelect = document.getElementById('ttsVoiceSelect');
+  const ttsRateSelect = document.getElementById('ttsRateSelect');
+  const ttsCloseBtn = document.getElementById('ttsCloseBtn');
+
+  // TTS State
+  const ttsState = {
+    supported: 'speechSynthesis' in window,
+    isPlaying: false,
+    isPaused: false,
+    mode: localStorage.getItem('astrea_tts_mode') || 'male', // 'male' | 'female' | 'custom'
+    rate: parseFloat(localStorage.getItem('astrea_tts_rate') || '1.0'),
+    selectedVoiceURI: localStorage.getItem('astrea_tts_voice_uri') || 'auto',
+    currentParaIndex: 0,
+    currentUtterance: null,
+    voices: [],
+    maleVoices: [],
+    femaleVoices: []
+  };
+
   // ==========================================
   // Modern Web Guidance: light-dismiss-a-dialog fallback
   // ==========================================
-  if (charModal) {
-    if (!('closedBy' in HTMLDialogElement.prototype)) {
-      charModal.addEventListener('click', (event) => {
-        if (event.target !== charModal) return;
-        const rect = charModal.getBoundingClientRect();
+  [charModal, chapterPickerModal].forEach(dialogEl => {
+    if (dialogEl && !('closedBy' in HTMLDialogElement.prototype)) {
+      dialogEl.addEventListener('click', (event) => {
+        if (event.target !== dialogEl) return;
+        const rect = dialogEl.getBoundingClientRect();
         const isDialogContent = (
           rect.top <= event.clientY &&
           event.clientY <= rect.top + rect.height &&
@@ -81,13 +137,30 @@ document.addEventListener('DOMContentLoaded', () => {
           event.clientX <= rect.left + rect.width
         );
         if (isDialogContent) return;
-        charModal.close();
+        dialogEl.close();
       });
     }
+  });
 
-    if (modalCloseBtn) {
-      modalCloseBtn.addEventListener('click', () => charModal.close());
-    }
+  if (modalCloseBtn && charModal) {
+    modalCloseBtn.addEventListener('click', () => charModal.close());
+  }
+  if (closeChapterModalBtn && chapterPickerModal) {
+    closeChapterModalBtn.addEventListener('click', () => chapterPickerModal.close());
+  }
+
+  // ==========================================
+  // Toast Notification Helper
+  // ==========================================
+  let toastTimer = null;
+  function showToast(message, duration = 2800) {
+    if (!toastNotification) return;
+    toastNotification.innerHTML = `<span>✨</span> <span>${message}</span>`;
+    toastNotification.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastNotification.classList.remove('show');
+    }, duration);
   }
 
   // ==========================================
@@ -317,8 +390,200 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ==========================================
+  // Bookmark & Reading Progress Engine
+  // ==========================================
+  function getBookmark() {
+    const chapterId = parseInt(
+      localStorage.getItem('astrea_bookmark_chapter_id') ||
+      localStorage.getItem('astrea_last_chapter_id') || '1',
+      10
+    );
+    const scrollPct = parseInt(localStorage.getItem('astrea_bookmark_scroll_pct') || '0', 10);
+    const foundChapter = novelData.chapters.find(c => c.id === chapterId) || novelData.chapters[0];
+    return {
+      chapterId: foundChapter ? foundChapter.id : 1,
+      scrollPct: isNaN(scrollPct) ? 0 : Math.max(0, Math.min(100, scrollPct)),
+      chapter: foundChapter
+    };
+  }
+
+  function updateBookmarkUI(chapter, scrollPct) {
+    if (!chapter) return;
+
+    // Update Header Bookmark Pill
+    if (navBookmarkLabel) {
+      navBookmarkLabel.textContent = `第${chapter.id}章 (${scrollPct}%)`;
+    }
+
+    // Update Floating Bookmark Bar
+    if (floatingBookmarkPercent) {
+      floatingBookmarkPercent.textContent = `已读 ${scrollPct}%`;
+    }
+    if (floatingBookmarkTitle) {
+      floatingBookmarkTitle.textContent = chapter.title;
+    }
+
+    // Update Hero Continue Button
+    if (heroContinueBtn) {
+      heroContinueBtn.innerHTML = `<span>📖</span> 继续阅读：第${chapter.id}章 (${scrollPct}%)`;
+    }
+  }
+
+  function saveBookmark(chapterId, scrollPct) {
+    const chapter = novelData.chapters.find(c => c.id === chapterId);
+    if (!chapter) return;
+
+    localStorage.setItem('astrea_bookmark_chapter_id', chapter.id);
+    localStorage.setItem('astrea_bookmark_scroll_pct', scrollPct);
+    localStorage.setItem('astrea_bookmark_title', chapter.title);
+
+    updateBookmarkUI(chapter, scrollPct);
+  }
+
+  function jumpToBookmark() {
+    const bookmark = getBookmark();
+    const targetIndex = novelData.chapters.findIndex(c => c.id === bookmark.chapterId);
+    const validIndex = targetIndex !== -1 ? targetIndex : 0;
+    const targetChapter = novelData.chapters[validIndex];
+
+    const performScroll = () => {
+      if (!readerArticleEl) return;
+      const articleTop = readerArticleEl.offsetTop;
+      const articleHeight = readerArticleEl.offsetHeight;
+      const targetScroll = articleTop + (articleHeight * (bookmark.scrollPct / 100)) - 90;
+      window.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth'
+      });
+      showToast(`已跳回记忆书签：${targetChapter.title} (进度 ${bookmark.scrollPct}%)`);
+    };
+
+    if (currentChapterIndex !== validIndex) {
+      loadChapter(validIndex, false);
+      setTimeout(performScroll, 120);
+    } else {
+      performScroll();
+    }
+  }
+
+  // ==========================================
+  // Quick Chapter Selector Modal (弹窗目录与快速切换)
+  // ==========================================
+  function renderChapterModalGrid(filterQuery = '') {
+    if (!modalChapterGrid) return;
+    modalChapterGrid.innerHTML = '';
+    const query = filterQuery.toLowerCase().trim();
+    const bookmark = getBookmark();
+
+    novelData.volumes.forEach(vol => {
+      const volChapters = novelData.chapters.filter(c => c.volumeId === vol.id);
+      const filtered = query
+        ? volChapters.filter(c => c.title.toLowerCase().includes(query) || c.content.toLowerCase().includes(query))
+        : volChapters;
+
+      if (filtered.length === 0) return;
+
+      const volBlock = document.createElement('div');
+      volBlock.className = 'modal-volume-block';
+
+      const volTitle = document.createElement('div');
+      volTitle.className = 'modal-volume-title';
+      volTitle.innerHTML = `<span>📜</span> <span>${vol.title}</span>`;
+      volBlock.appendChild(volTitle);
+
+      const grid = document.createElement('div');
+      grid.className = 'modal-chapter-grid';
+
+      filtered.forEach(ch => {
+        const isActive = novelData.chapters[currentChapterIndex]?.id === ch.id;
+        const isBookmarked = ch.id === bookmark.chapterId;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `modal-chapter-btn ${isActive ? 'active' : ''} ${isBookmarked ? 'bookmarked' : ''}`;
+        btn.innerHTML = `
+          <span class="modal-ch-num">${ch.volumeTitle.split('·')[0].trim()} · 第 ${ch.id} 章</span>
+          <span class="modal-ch-title">${ch.title}</span>
+          <span class="modal-ch-meta">
+            <span>✍️ ${ch.wordCount.toLocaleString()} 字</span>
+            <span>⏱️ ${Math.ceil(ch.wordCount / 400)} 分钟</span>
+          </span>
+        `;
+
+        btn.addEventListener('click', () => {
+          const targetIndex = novelData.chapters.findIndex(c => c.id === ch.id);
+          if (targetIndex !== -1) {
+            loadChapter(targetIndex, true);
+            if (chapterPickerModal) chapterPickerModal.close();
+            showToast(`📖 已切换至：${ch.title}`);
+          }
+        });
+
+        grid.appendChild(btn);
+      });
+
+      volBlock.appendChild(grid);
+      modalChapterGrid.appendChild(volBlock);
+    });
+  }
+
+  // Chapter Picker Modal Triggers & Events
+  if (openChapterPickerBtn && chapterPickerModal) {
+    openChapterPickerBtn.addEventListener('click', () => {
+      chapterPickerModal.showModal();
+      if (modalChapterSearch) {
+        modalChapterSearch.value = '';
+        setTimeout(() => modalChapterSearch.focus(), 60);
+      }
+      renderChapterModalGrid('');
+    });
+  }
+
+  if (modalChapterSearch) {
+    modalChapterSearch.addEventListener('input', (e) => {
+      renderChapterModalGrid(e.target.value);
+    });
+  }
+
+  // Toolbar Drawer Toggle
+  if (toolbarDrawerBtn && readerSidebar) {
+    toolbarDrawerBtn.addEventListener('click', () => {
+      readerSidebar.classList.toggle('open');
+    });
+  }
+
+  // Real-time Debounced Reading Scroll Tracker
+  let scrollTrackTimeout = null;
+  window.addEventListener('scroll', () => {
+    if (scrollTrackTimeout) return;
+    scrollTrackTimeout = setTimeout(() => {
+      scrollTrackTimeout = null;
+      if (!readerArticleEl) return;
+      const rect = readerArticleEl.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      // When user is reading inside or near article
+      if (rect.top <= windowHeight && rect.bottom >= 0) {
+        const articleHeight = readerArticleEl.offsetHeight;
+        const currentScroll = window.scrollY || window.pageYOffset;
+        const articleTop = readerArticleEl.offsetTop;
+        const scrollOffset = currentScroll - articleTop;
+        const maxScroll = articleHeight - windowHeight * 0.7;
+        let pct = 0;
+        if (maxScroll > 0) {
+          pct = Math.round((scrollOffset / maxScroll) * 100);
+        }
+        pct = Math.max(0, Math.min(100, pct));
+        const currentChapter = novelData.chapters[currentChapterIndex];
+        if (currentChapter) {
+          saveBookmark(currentChapter.id, pct);
+        }
+      }
+    }, 150);
+  }, { passive: true });
+
   // Load and Render Chapter
-  function loadChapter(index) {
+  function loadChapter(index, autoScroll = true) {
     if (index < 0 || index >= novelData.chapters.length) return;
     currentChapterIndex = index;
     const chapter = novelData.chapters[index];
@@ -337,9 +602,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b) b.disabled = isLast;
     });
 
-    // Update Quick Read Buttons Label
-    if (heroContinueBtn) {
-      heroContinueBtn.innerHTML = `<span>📖</span> 继续阅读：${chapter.title.slice(0, 14)}...`;
+    // Update Toolbar Chapter Title Dropdown
+    if (toolbarChapterTitle) {
+      toolbarChapterTitle.textContent = `${chapter.title.slice(0, 15)} ▾`;
     }
 
     // Format content paragraphs
@@ -366,10 +631,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Re-render sidebar to highlight active item
     renderChapterSidebar(chapterFilterInput ? chapterFilterInput.value : '');
 
-    // Scroll to reader top smoothly
-    const readerSection = document.getElementById('reader');
-    if (readerSection) {
-      readerSection.scrollIntoView({ behavior: 'smooth' });
+    // Reset bookmark for newly opened chapter
+    saveBookmark(chapter.id, 0);
+
+    // Scroll to reader top smoothly if requested
+    if (autoScroll) {
+      const readerSection = document.getElementById('reader');
+      if (readerSection) {
+        readerSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // TTS Synchronous Update: if playing, seamlessly start reading new chapter from start
+    if (ttsState.isPlaying) {
+      ttsState.currentParaIndex = 0;
+      playParagraph(0);
+    } else {
+      ttsState.currentParaIndex = 0;
+      updateTTSPlayerUI();
+      readerArticleEl.querySelectorAll('.tts-reading-highlight').forEach(el => {
+        el.classList.remove('tts-reading-highlight');
+      });
     }
   }
 
@@ -393,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (prevChapterBottomBtn) prevChapterBottomBtn.addEventListener('click', goPrev);
   if (nextChapterBottomBtn) nextChapterBottomBtn.addEventListener('click', goNext);
 
-  // Jump from Hero buttons
+  // Jump from Hero & Bookmark buttons
   if (quickReadBtn) {
     quickReadBtn.addEventListener('click', () => {
       loadChapter(currentChapterIndex);
@@ -401,17 +683,500 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   if (heroContinueBtn) {
-    heroContinueBtn.addEventListener('click', () => {
-      loadChapter(currentChapterIndex);
-      document.getElementById('reader')?.scrollIntoView({ behavior: 'smooth' });
-    });
+    heroContinueBtn.addEventListener('click', jumpToBookmark);
   }
   if (heroStartBtn) {
     heroStartBtn.addEventListener('click', () => {
       loadChapter(0);
       document.getElementById('reader')?.scrollIntoView({ behavior: 'smooth' });
+      showToast('🚀 已开启第一章：铅灰雨夜与初啼');
     });
   }
+  if (navBookmarkBtn) {
+    navBookmarkBtn.addEventListener('click', jumpToBookmark);
+  }
+  if (floatingBookmarkJumpBtn) {
+    floatingBookmarkJumpBtn.addEventListener('click', jumpToBookmark);
+  }
+  if (dismissBookmarkBtn && floatingBookmark) {
+    dismissBookmarkBtn.addEventListener('click', () => {
+      floatingBookmark.classList.add('hidden');
+      showToast('记忆书签已最小化，可点击顶部导航栏书签随时唤起');
+    });
+  }
+
+  // ==========================================
+  // AI VOICE READ-ALOUD ENGINE (Web Speech API 智能朗读)
+  // ==========================================
+
+  // Populate system voices & classify into Male / Goddess
+  function initTTSVoices() {
+    if (!ttsState.supported) {
+      if (toolbarTtsBtn) toolbarTtsBtn.title = '当前浏览器暂不支持语音合成';
+      return;
+    }
+
+    const loadVoices = () => {
+      const all = window.speechSynthesis.getVoices();
+      if (!all || all.length === 0) return;
+      ttsState.voices = all;
+
+      // Filter Chinese / Asian / Natural voices
+      const zh = all.filter(v =>
+        v.lang.includes('zh') ||
+        v.lang.includes('cmn') ||
+        v.lang.includes('CN') ||
+        v.lang.includes('TW') ||
+        v.lang.includes('HK') ||
+        v.name.includes('Chinese') ||
+        v.name.includes('中文') ||
+        v.name.includes('普通话')
+      );
+      const candidates = zh.length > 0 ? zh : all;
+
+      // Categorize into Male (男声)
+      ttsState.maleVoices = candidates.filter(v => {
+        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        return n.includes('yunxi') || n.includes('yunjian') || n.includes('yunyang') ||
+               n.includes('kangkang') || n.includes('danny') || n.includes('male') ||
+               n.includes('男') || n.includes('bo') || n.includes('guang') || n.includes('yushu');
+      });
+
+      // Categorize into Goddess / Female (女神音)
+      ttsState.femaleVoices = candidates.filter(v => {
+        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        return n.includes('xiaoxiao') || n.includes('xiaoyi') || n.includes('yaoyao') ||
+               n.includes('huihui') || n.includes('female') || n.includes('女') ||
+               n.includes('tingting') || n.includes('meijia') || n.includes('sinji') ||
+               n.includes('xiaoyan') || n.includes('goddess');
+      });
+
+      // Populate voice select dropdown
+      if (ttsVoiceSelect) {
+        ttsVoiceSelect.innerHTML = `<option value="auto">🎙️ 自动最优系统声线</option>`;
+        candidates.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.voiceURI || v.name;
+          const isM = ttsState.maleVoices.includes(v);
+          const isF = ttsState.femaleVoices.includes(v);
+          const icon = isM ? '👑' : isF ? '✨' : '🎙️';
+          opt.textContent = `${icon} ${v.name} (${v.lang})`;
+          ttsVoiceSelect.appendChild(opt);
+        });
+
+        if (ttsState.selectedVoiceURI && ttsState.selectedVoiceURI !== 'auto') {
+          ttsVoiceSelect.value = ttsState.selectedVoiceURI;
+        }
+      }
+
+      // Sync active button classes
+      if (voiceMaleBtn) voiceMaleBtn.classList.toggle('active', ttsState.mode === 'male');
+      if (voiceFemaleBtn) voiceFemaleBtn.classList.toggle('active', ttsState.mode === 'female');
+
+      updateVoiceLabel();
+    };
+
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }
+
+  // Get active voice configuration (voice object, pitch, rate)
+  function getActiveVoiceConfig() {
+    let chosenVoice = null;
+    let pitch = 1.0;
+
+    if (ttsState.mode === 'custom' && ttsState.selectedVoiceURI !== 'auto') {
+      chosenVoice = ttsState.voices.find(v => (v.voiceURI || v.name) === ttsState.selectedVoiceURI);
+    }
+
+    if (!chosenVoice) {
+      if (ttsState.mode === 'female') {
+        // Goddess mode: prioritize best natural female voice
+        chosenVoice = ttsState.femaleVoices[0] ||
+                      ttsState.voices.find(v => v.lang.includes('zh') || v.lang.includes('CN')) ||
+                      ttsState.voices[0];
+        pitch = 1.15; // clear, sweet celestial pitch
+      } else {
+        // Male protagonist mode: prioritize best deep male voice
+        chosenVoice = ttsState.maleVoices[0] ||
+                      ttsState.voices.find(v => v.lang.includes('zh') || v.lang.includes('CN')) ||
+                      ttsState.voices[0];
+        pitch = 0.95; // deep, resonant lord protagonist pitch
+      }
+    }
+
+    return { voice: chosenVoice, pitch, rate: ttsState.rate };
+  }
+
+  // Update voice display title in player bar
+  function updateVoiceLabel() {
+    const config = getActiveVoiceConfig();
+    let nameText = '👑 沉稳男声 (奥尔多斯)';
+    if (ttsState.mode === 'female') {
+      nameText = '✨ 空灵女神 (神明娇妻)';
+    } else if (ttsState.mode === 'custom') {
+      nameText = config.voice ? `🎙️ ${config.voice.name.slice(0, 16)}` : '🎙️ 自定义声线';
+    } else {
+      if (config.voice && (config.voice.name.includes('Yunxi') || config.voice.name.includes('云希'))) {
+        nameText = '👑 微软云希 (奥尔多斯沉稳声线)';
+      } else if (config.voice && (config.voice.name.includes('Yunjian') || config.voice.name.includes('云健'))) {
+        nameText = '👑 微软云健 (霸气主宰声线)';
+      }
+    }
+
+    if (ttsVoiceTitle) {
+      ttsVoiceTitle.textContent = `声线：${nameText}`;
+      ttsVoiceTitle.title = config.voice ? `${config.voice.name} (${config.voice.lang})` : nameText;
+    }
+  }
+
+  // Update TTS Player UI widgets
+  function updateTTSPlayerUI() {
+    const chapter = novelData.chapters[currentChapterIndex];
+    const totalParas = chapter?.paragraphs?.length || 0;
+
+    // Visualizer playing animation
+    if (ttsPlayerBar) {
+      ttsPlayerBar.classList.toggle('playing', ttsState.isPlaying && !ttsState.isPaused);
+    }
+
+    // Play/Pause icon
+    if (ttsPlayIcon) {
+      ttsPlayIcon.textContent = (ttsState.isPlaying && !ttsState.isPaused) ? '⏸' : '▶';
+    }
+
+    // Status Badge
+    if (ttsStatusBadge) {
+      if (!ttsState.isPlaying) {
+        ttsStatusBadge.textContent = '🎧 准备就绪';
+        ttsStatusBadge.style.color = 'var(--gold-light)';
+      } else if (ttsState.isPaused) {
+        ttsStatusBadge.textContent = '⏸ 已暂停';
+        ttsStatusBadge.style.color = 'var(--text-muted)';
+      } else {
+        ttsStatusBadge.textContent = '🔊 正在朗读';
+        ttsStatusBadge.style.color = '#10b981';
+      }
+    }
+
+    // Paragraph Count
+    if (ttsParaCount) {
+      ttsParaCount.textContent = `段落 ${ttsState.currentParaIndex + 1} / ${totalParas}`;
+    }
+
+    // Toolbar button text
+    if (toolbarTtsLabel) {
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        toolbarTtsLabel.textContent = '朗读中...';
+      } else if (ttsState.isPaused) {
+        toolbarTtsLabel.textContent = '已暂停';
+      } else {
+        toolbarTtsLabel.textContent = '语音朗读';
+      }
+    }
+
+    updateVoiceLabel();
+  }
+
+  // Strip markdown, HUD indicators, and emojis for smooth, natural audio speech
+  function cleanTextForSpeech(text) {
+    if (!text) return '';
+    return text
+      .replace(/^>\s*/gm, '')
+      .replace(/^[#*>\-]+\s*/gm, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/[【〔［]/g, '，')
+      .replace(/[】〕］]/g, '，')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Highlight active reading paragraph with smooth center scroll
+  function highlightParagraph(index) {
+    if (!readerArticleEl) return;
+
+    readerArticleEl.querySelectorAll('.tts-reading-highlight').forEach(el => {
+      el.classList.remove('tts-reading-highlight');
+    });
+
+    const paragraphs = readerArticleEl.querySelectorAll('.reader-content > *');
+    if (index >= 0 && index < paragraphs.length) {
+      const activeEl = paragraphs[index];
+      activeEl.classList.add('tts-reading-highlight');
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // Play a specific paragraph
+  function playParagraph(index) {
+    if (!ttsState.supported) {
+      showToast('⚠️ 当前浏览器不支持语音合成，推荐使用 Chrome 或 Edge');
+      return;
+    }
+
+    const chapter = novelData.chapters[currentChapterIndex];
+    if (!chapter || !chapter.paragraphs || chapter.paragraphs.length === 0) return;
+
+    if (index < 0) index = 0;
+    if (index >= chapter.paragraphs.length) {
+      // Finished all paragraphs of current chapter!
+      stopTTS();
+      showToast('🎉 本章已全部朗读完毕！');
+      if (currentChapterIndex < novelData.chapters.length - 1) {
+        setTimeout(() => {
+          showToast('即将自动进入下一章朗读...');
+          loadChapter(currentChapterIndex + 1);
+          setTimeout(() => startTTS(0), 500);
+        }, 1500);
+      }
+      return;
+    }
+
+    ttsState.currentParaIndex = index;
+    const rawPara = chapter.paragraphs[index];
+    const speechText = cleanTextForSpeech(rawPara);
+
+    // Cancel current synthesis
+    window.speechSynthesis.cancel();
+
+    // Skip empty or short symbol lines
+    if (!speechText || speechText.length < 2) {
+      playParagraph(index + 1);
+      return;
+    }
+
+    const config = getActiveVoiceConfig();
+    const utterance = new SpeechSynthesisUtterance(speechText);
+    if (config.voice) utterance.voice = config.voice;
+    utterance.rate = config.rate;
+    utterance.pitch = config.pitch;
+
+    utterance.onstart = () => {
+      ttsState.isPlaying = true;
+      ttsState.isPaused = false;
+      updateTTSPlayerUI();
+      highlightParagraph(index);
+    };
+
+    utterance.onend = () => {
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        playParagraph(index + 1);
+      }
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error !== 'canceled' && e.error !== 'interrupted') {
+        playParagraph(index + 1);
+      }
+    };
+
+    ttsState.currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Start TTS playback
+  function startTTS(fromIndex = null) {
+    if (fromIndex !== null) {
+      ttsState.currentParaIndex = fromIndex;
+    }
+    if (ttsPlayerBar) ttsPlayerBar.classList.remove('hidden');
+    if (toolbarTtsBtn) toolbarTtsBtn.classList.add('active');
+    playParagraph(ttsState.currentParaIndex);
+  }
+
+  // Pause TTS
+  function pauseTTS() {
+    if (ttsState.isPlaying && !ttsState.isPaused) {
+      window.speechSynthesis.pause();
+      ttsState.isPaused = true;
+      updateTTSPlayerUI();
+    }
+  }
+
+  // Resume TTS
+  function resumeTTS() {
+    if (ttsState.isPaused) {
+      window.speechSynthesis.resume();
+      ttsState.isPaused = false;
+      updateTTSPlayerUI();
+    } else {
+      playParagraph(ttsState.currentParaIndex);
+    }
+  }
+
+  // Toggle Play / Pause
+  function togglePlayPauseTTS() {
+    if (!ttsState.isPlaying) {
+      startTTS();
+    } else if (ttsState.isPaused) {
+      resumeTTS();
+    } else {
+      pauseTTS();
+    }
+  }
+
+  // Stop TTS
+  function stopTTS() {
+    window.speechSynthesis.cancel();
+    ttsState.isPlaying = false;
+    ttsState.isPaused = false;
+    ttsState.currentParaIndex = 0;
+    updateTTSPlayerUI();
+
+    if (readerArticleEl) {
+      readerArticleEl.querySelectorAll('.tts-reading-highlight').forEach(el => {
+        el.classList.remove('tts-reading-highlight');
+      });
+    }
+    if (toolbarTtsBtn) {
+      toolbarTtsBtn.classList.remove('active');
+      toolbarTtsLabel.textContent = '语音朗读';
+    }
+  }
+
+  // Next paragraph
+  function nextParagraphTTS() {
+    playParagraph(ttsState.currentParaIndex + 1);
+  }
+
+  // Prev paragraph
+  function prevParagraphTTS() {
+    playParagraph(Math.max(0, ttsState.currentParaIndex - 1));
+  }
+
+  // Set Voice Mode (male / female / custom)
+  function setVoiceMode(mode) {
+    ttsState.mode = mode;
+    localStorage.setItem('astrea_tts_mode', mode);
+
+    if (voiceMaleBtn) voiceMaleBtn.classList.toggle('active', mode === 'male');
+    if (voiceFemaleBtn) voiceFemaleBtn.classList.toggle('active', mode === 'female');
+
+    if (ttsVoiceSelect) {
+      ttsVoiceSelect.value = 'auto';
+      ttsState.selectedVoiceURI = 'auto';
+      localStorage.setItem('astrea_tts_voice_uri', 'auto');
+    }
+
+    updateVoiceLabel();
+    showToast(mode === 'male' ? '👑 已切换至【奥尔多斯·沉稳男声】' : '✨ 已切换至【神明娇妻·空灵女神音】');
+
+    if (ttsState.isPlaying && !ttsState.isPaused) {
+      playParagraph(ttsState.currentParaIndex);
+    }
+  }
+
+  // Attach TTS Listeners
+  if (toolbarTtsBtn) {
+    toolbarTtsBtn.addEventListener('click', () => {
+      if (ttsPlayerBar && ttsPlayerBar.classList.contains('hidden')) {
+        ttsPlayerBar.classList.remove('hidden');
+        startTTS();
+        showToast('🎧 语音朗读播放器已开启，点击任意段落可直达朗读');
+      } else {
+        togglePlayPauseTTS();
+      }
+    });
+  }
+
+  if (ttsPlayPauseBtn) {
+    ttsPlayPauseBtn.addEventListener('click', togglePlayPauseTTS);
+  }
+
+  if (ttsStopBtn) {
+    ttsStopBtn.addEventListener('click', () => {
+      stopTTS();
+      showToast('⏹ 朗读已停止');
+    });
+  }
+
+  if (ttsPrevParaBtn) ttsPrevParaBtn.addEventListener('click', prevParagraphTTS);
+  if (ttsNextParaBtn) ttsNextParaBtn.addEventListener('click', nextParagraphTTS);
+
+  if (voiceMaleBtn) {
+    voiceMaleBtn.addEventListener('click', () => setVoiceMode('male'));
+  }
+  if (voiceFemaleBtn) {
+    voiceFemaleBtn.addEventListener('click', () => setVoiceMode('female'));
+  }
+
+  if (ttsVoiceSelect) {
+    ttsVoiceSelect.addEventListener('change', (e) => {
+      ttsState.selectedVoiceURI = e.target.value;
+      localStorage.setItem('astrea_tts_voice_uri', e.target.value);
+      if (e.target.value === 'auto') {
+        ttsState.mode = voiceMaleBtn && voiceMaleBtn.classList.contains('active') ? 'male' : 'female';
+      } else {
+        ttsState.mode = 'custom';
+        if (voiceMaleBtn) voiceMaleBtn.classList.remove('active');
+        if (voiceFemaleBtn) voiceFemaleBtn.classList.remove('active');
+      }
+      localStorage.setItem('astrea_tts_mode', ttsState.mode);
+      updateVoiceLabel();
+      showToast(`🎙️ 已切换发音人：${e.target.selectedOptions[0]?.text || e.target.value}`);
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        playParagraph(ttsState.currentParaIndex);
+      }
+    });
+  }
+
+  if (ttsRateSelect) {
+    ttsRateSelect.value = ttsState.rate.toString();
+    ttsRateSelect.addEventListener('change', (e) => {
+      ttsState.rate = parseFloat(e.target.value);
+      localStorage.setItem('astrea_tts_rate', ttsState.rate);
+      showToast(`⏱️ 语速已设置为 ${ttsState.rate}x`);
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        playParagraph(ttsState.currentParaIndex);
+      }
+    });
+  }
+
+  if (ttsCloseBtn && ttsPlayerBar) {
+    ttsCloseBtn.addEventListener('click', () => {
+      stopTTS();
+      ttsPlayerBar.classList.add('hidden');
+      showToast('语音播放器已收起');
+    });
+  }
+
+  // Click on any paragraph inside reader to jump-play that paragraph
+  if (readerArticleEl) {
+    readerArticleEl.addEventListener('click', (e) => {
+      if (ttsPlayerBar && !ttsPlayerBar.classList.contains('hidden')) {
+        const p = e.target.closest('.reader-content > *');
+        if (p) {
+          const paragraphs = Array.from(readerArticleEl.querySelectorAll('.reader-content > *'));
+          const idx = paragraphs.indexOf(p);
+          if (idx !== -1) {
+            playParagraph(idx);
+            showToast(`🎧 从第 ${idx + 1} 段开始朗读`);
+          }
+        }
+      }
+    });
+  }
+
+  // Keyboard shortcut listener for TTS
+  window.addEventListener('keydown', (e) => {
+    // Only trigger if TTS bar is visible and user is not typing in an input
+    if (ttsPlayerBar && !ttsPlayerBar.classList.contains('hidden') && e.target.tagName !== 'INPUT') {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPauseTTS();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        nextParagraphTTS();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        prevParagraphTTS();
+      }
+    }
+  });
 
   // ==========================================
   // 5. Character Archive & Modal
@@ -663,7 +1428,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initialize all sections
-  loadChapter(currentChapterIndex);
+  loadChapter(currentChapterIndex, false);
+  const initialBookmark = getBookmark();
+  updateBookmarkUI(initialBookmark.chapter, initialBookmark.scrollPct);
+  initTTSVoices();
+
   renderCharacters();
   renderNineKids();
   renderSchedule();

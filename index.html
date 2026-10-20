@@ -364,6 +364,54 @@
     </div>
   </dialog>
 
+  <!-- Modern Dialog: Mobile Voice Troubleshoot & Guide Modal (Light-Dismiss Compliant) -->
+  <dialog id="ttsHelpModal" closedby="any" aria-labelledby="ttsHelpTitle">
+    <div class="tts-help-card">
+      <div class="tts-help-header">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="font-size:1.3rem;">📱</span>
+          <h3 id="ttsHelpTitle">手机中文朗读发音设置指南</h3>
+        </div>
+        <button class="modal-close-btn" id="closeTtsHelpBtn" aria-label="关闭窗口">✕</button>
+      </div>
+      <div class="tts-help-body">
+        <div class="help-notice-box">
+          <p><strong>💡 为什么手机有时会发出英语音读中文？</strong></p>
+          <p style="margin-top:0.35rem;font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+            本站已<strong>强制锁定 zh-CN 中文语言协议</strong>并自动过滤所有外语发音人！若部分海外版或特殊定制手机仍偶尔发出英文音，是因为手机系统层面尚未启用或下载官方「中文离线语音包」，按照下方步骤操作即可立享天籁中文声线：
+          </p>
+        </div>
+
+        <div class="help-platform-card">
+          <h4>🍎 苹果 iPhone (iOS) 用户设置：</h4>
+          <ol>
+            <li>打开 iPhone【设置】➜【辅助功能】➜【朗读内容】。</li>
+            <li>点击【声音】➜ 找到【中文】。</li>
+            <li>勾选或下载<strong>「普通话 (中国) - 婷婷 (增强/超自然)」</strong>或「Siri 中文」。</li>
+            <li>返回本网页刷新，即可享受到宛如专业声优般甜美的神明娇妻女神音与沉稳男声！</li>
+          </ol>
+        </div>
+
+        <div class="help-platform-card">
+          <h4>🤖 安卓 Android (华为/小米/三星/OPPO/VIVO) 用户：</h4>
+          <ol>
+            <li>打开手机【设置】➜ 搜索<strong>「文字转语音」</strong>或<strong>「TTS」</strong>。</li>
+            <li>将首选引擎设为<strong>「Google 语音服务」</strong>或品牌系统自带语音引擎。</li>
+            <li>进入引擎设置，语言选择<strong>「中文 (中国)」</strong>，下载免费高保真中文语音包。</li>
+            <li>返回浏览器即可拥有清晰流畅的普通话男神/女神朗读。</li>
+          </ol>
+        </div>
+
+        <div class="help-platform-card">
+          <h4>💻 电脑端 (Edge / Chrome) 用户：</h4>
+          <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;">
+            推荐使用 <strong>Microsoft Edge</strong> 或 <strong>Google Chrome</strong> 打开本站，内置超高保真「微软云希（沉稳男声）」与「微软晓晓（空灵女神音）」，无需任何配置即可直接聆听全书！
+          </p>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Floating Voice Read-Aloud Audio Player Widget (TTS) -->
   <aside class="tts-player-bar hidden" id="ttsPlayerBar" aria-label="AI智能语音朗读播放器">
     <div class="tts-inner-wrap">
@@ -418,7 +466,8 @@
         </select>
       </div>
 
-      <!-- Close Button -->
+      <!-- Action Buttons: Help & Close -->
+      <button class="btn-tts-help" id="ttsHelpBtn" title="手机发音指南与排查" aria-label="发音帮助">❓</button>
       <button class="btn-tts-close" id="ttsCloseBtn" title="收起播放器" aria-label="收起播放器">✕</button>
     </div>
   </aside>

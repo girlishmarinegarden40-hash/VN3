@@ -106,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const ttsVoiceSelect = document.getElementById('ttsVoiceSelect');
   const ttsRateSelect = document.getElementById('ttsRateSelect');
   const ttsCloseBtn = document.getElementById('ttsCloseBtn');
+  const ttsHelpBtn = document.getElementById('ttsHelpBtn');
+  const ttsHelpModal = document.getElementById('ttsHelpModal');
+  const closeTtsHelpBtn = document.getElementById('closeTtsHelpBtn');
 
   // TTS State
   const ttsState = {
@@ -125,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // Modern Web Guidance: light-dismiss-a-dialog fallback
   // ==========================================
-  [charModal, chapterPickerModal].forEach(dialogEl => {
+  [charModal, chapterPickerModal, ttsHelpModal].forEach(dialogEl => {
     if (dialogEl && !('closedBy' in HTMLDialogElement.prototype)) {
       dialogEl.addEventListener('click', (event) => {
         if (event.target !== dialogEl) return;
@@ -147,6 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (closeChapterModalBtn && chapterPickerModal) {
     closeChapterModalBtn.addEventListener('click', () => chapterPickerModal.close());
+  }
+  if (closeTtsHelpBtn && ttsHelpModal) {
+    closeTtsHelpBtn.addEventListener('click', () => ttsHelpModal.close());
+  }
+  if (ttsHelpBtn && ttsHelpModal) {
+    ttsHelpBtn.addEventListener('click', () => ttsHelpModal.showModal());
   }
 
   // ==========================================
@@ -709,6 +718,59 @@ document.addEventListener('DOMContentLoaded', () => {
   // AI VOICE READ-ALOUD ENGINE (Web Speech API 智能朗读)
   // ==========================================
 
+  // Chinese Voice Verification & Mobile Guard
+  function isChineseVoice(v) {
+    if (!v) return false;
+    const lang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+    const name = (v.name || '').toLowerCase();
+    return (
+      lang.startsWith('zh') ||
+      lang.startsWith('cmn') ||
+      lang.includes('chinese') ||
+      name.includes('chinese') ||
+      name.includes('中文') ||
+      name.includes('普通话') ||
+      name.includes('国语') ||
+      name.includes('华语') ||
+      name.includes('taiwan') ||
+      name.includes('mandarin') ||
+      name.includes('cantonese') ||
+      name.includes('xiaoxiao') ||
+      name.includes('yunxi') ||
+      name.includes('yunjian') ||
+      name.includes('tingting') ||
+      name.includes('yaoyao') ||
+      name.includes('huihui') ||
+      name.includes('kangkang') ||
+      name.includes('sinji') ||
+      name.includes('meijia')
+    );
+  }
+
+  function isMaleVoice(v) {
+    if (!v) return false;
+    const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+    return (
+      n.includes('yunxi') || n.includes('yunjian') || n.includes('yunyang') ||
+      n.includes('kangkang') || n.includes('danny') || n.includes('male') ||
+      n.includes('男') || n.includes('bo') || n.includes('guang') ||
+      n.includes('yushu') || n.includes('limu') || n.includes('haoyu') ||
+      n.includes('xiaoqiang')
+    );
+  }
+
+  function isFemaleVoice(v) {
+    if (!v) return false;
+    const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+    return (
+      n.includes('xiaoxiao') || n.includes('xiaoyi') || n.includes('yaoyao') ||
+      n.includes('huihui') || n.includes('female') || n.includes('女') ||
+      n.includes('tingting') || n.includes('meijia') || n.includes('sinji') ||
+      n.includes('xiaoyan') || n.includes('goddess') || n.includes('siri') ||
+      n.includes('xiaomeng') || n.includes('hiuga')
+    );
+  }
+
   // Populate system voices & classify into Male / Goddess
   function initTTSVoices() {
     if (!ttsState.supported) {
@@ -721,48 +783,34 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!all || all.length === 0) return;
       ttsState.voices = all;
 
-      // Filter Chinese / Asian / Natural voices
-      const zh = all.filter(v =>
-        v.lang.includes('zh') ||
-        v.lang.includes('cmn') ||
-        v.lang.includes('CN') ||
-        v.lang.includes('TW') ||
-        v.lang.includes('HK') ||
-        v.name.includes('Chinese') ||
-        v.name.includes('中文') ||
-        v.name.includes('普通话')
-      );
-      const candidates = zh.length > 0 ? zh : all;
+      // STRICTLY Filter ONLY Chinese voices to prevent English phoneme reading on mobile!
+      const zhVoices = all.filter(isChineseVoice);
 
-      // Categorize into Male (男声)
-      ttsState.maleVoices = candidates.filter(v => {
-        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-        return n.includes('yunxi') || n.includes('yunjian') || n.includes('yunyang') ||
-               n.includes('kangkang') || n.includes('danny') || n.includes('male') ||
-               n.includes('男') || n.includes('bo') || n.includes('guang') || n.includes('yushu');
-      });
+      // Categorize into Male (男声) strictly from Chinese voices
+      ttsState.maleVoices = zhVoices.filter(isMaleVoice);
 
-      // Categorize into Goddess / Female (女神音)
-      ttsState.femaleVoices = candidates.filter(v => {
-        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-        return n.includes('xiaoxiao') || n.includes('xiaoyi') || n.includes('yaoyao') ||
-               n.includes('huihui') || n.includes('female') || n.includes('女') ||
-               n.includes('tingting') || n.includes('meijia') || n.includes('sinji') ||
-               n.includes('xiaoyan') || n.includes('goddess');
-      });
+      // Categorize into Goddess / Female (女神音) strictly from Chinese voices
+      ttsState.femaleVoices = zhVoices.filter(isFemaleVoice);
 
-      // Populate voice select dropdown
+      // Populate voice select dropdown strictly with Chinese voices
       if (ttsVoiceSelect) {
         ttsVoiceSelect.innerHTML = `<option value="auto">🎙️ 自动最优系统声线</option>`;
-        candidates.forEach(v => {
+        if (zhVoices.length === 0) {
           const opt = document.createElement('option');
-          opt.value = v.voiceURI || v.name;
-          const isM = ttsState.maleVoices.includes(v);
-          const isF = ttsState.femaleVoices.includes(v);
-          const icon = isM ? '👑' : isF ? '✨' : '🎙️';
-          opt.textContent = `${icon} ${v.name} (${v.lang})`;
+          opt.value = 'system-native-zh';
+          opt.textContent = '📱 移动端系统原生中文引擎 (标准普通话)';
           ttsVoiceSelect.appendChild(opt);
-        });
+        } else {
+          zhVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.voiceURI || v.name;
+            const isM = ttsState.maleVoices.includes(v);
+            const isF = ttsState.femaleVoices.includes(v);
+            const icon = isM ? '👑' : isF ? '✨' : '🎙️';
+            opt.textContent = `${icon} ${v.name} (${v.lang})`;
+            ttsVoiceSelect.appendChild(opt);
+          });
+        }
 
         if (ttsState.selectedVoiceURI && ttsState.selectedVoiceURI !== 'auto') {
           ttsVoiceSelect.value = ttsState.selectedVoiceURI;
@@ -782,32 +830,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Get active voice configuration (voice object, pitch, rate)
+  // Get active voice configuration (voice object, pitch, rate, lang)
   function getActiveVoiceConfig() {
     let chosenVoice = null;
     let pitch = 1.0;
 
-    if (ttsState.mode === 'custom' && ttsState.selectedVoiceURI !== 'auto') {
-      chosenVoice = ttsState.voices.find(v => (v.voiceURI || v.name) === ttsState.selectedVoiceURI);
+    const zhVoices = ttsState.voices.filter(isChineseVoice);
+
+    if (ttsState.mode === 'custom' && ttsState.selectedVoiceURI !== 'auto' && ttsState.selectedVoiceURI !== 'system-native-zh') {
+      const match = ttsState.voices.find(v => (v.voiceURI || v.name) === ttsState.selectedVoiceURI);
+      if (match && isChineseVoice(match)) {
+        chosenVoice = match;
+      }
     }
 
     if (!chosenVoice) {
       if (ttsState.mode === 'female') {
         // Goddess mode: prioritize best natural female voice
         chosenVoice = ttsState.femaleVoices[0] ||
-                      ttsState.voices.find(v => v.lang.includes('zh') || v.lang.includes('CN')) ||
-                      ttsState.voices[0];
+                      zhVoices.find(v => !ttsState.maleVoices.includes(v)) ||
+                      zhVoices[0] ||
+                      null;
         pitch = 1.15; // clear, sweet celestial pitch
       } else {
         // Male protagonist mode: prioritize best deep male voice
         chosenVoice = ttsState.maleVoices[0] ||
-                      ttsState.voices.find(v => v.lang.includes('zh') || v.lang.includes('CN')) ||
-                      ttsState.voices[0];
-        pitch = 0.95; // deep, resonant lord protagonist pitch
+                      zhVoices.find(v => !ttsState.femaleVoices.includes(v)) ||
+                      zhVoices[0] ||
+                      null;
+        pitch = 0.92; // deep, resonant lord protagonist pitch
       }
     }
 
-    return { voice: chosenVoice, pitch, rate: ttsState.rate };
+    // STRICT SANITY CHECK: Never return a non-Chinese voice!
+    if (chosenVoice && !isChineseVoice(chosenVoice)) {
+      chosenVoice = null;
+    }
+
+    // Determine strict BCP-47 language tag (e.g. zh-CN)
+    let lang = 'zh-CN';
+    if (chosenVoice && chosenVoice.lang && isChineseVoice(chosenVoice)) {
+      lang = chosenVoice.lang.replace(/_/g, '-');
+    }
+
+    return {
+      voice: chosenVoice,
+      pitch,
+      rate: ttsState.rate,
+      lang
+    };
   }
 
   // Update voice display title in player bar
@@ -820,15 +891,17 @@ document.addEventListener('DOMContentLoaded', () => {
       nameText = config.voice ? `🎙️ ${config.voice.name.slice(0, 16)}` : '🎙️ 自定义声线';
     } else {
       if (config.voice && (config.voice.name.includes('Yunxi') || config.voice.name.includes('云希'))) {
-        nameText = '👑 微软云希 (奥尔多斯沉稳声线)';
+        nameText = '👑 微软云希 (沉稳主角音)';
       } else if (config.voice && (config.voice.name.includes('Yunjian') || config.voice.name.includes('云健'))) {
-        nameText = '👑 微软云健 (霸气主宰声线)';
+        nameText = '👑 微软云健 (霸气主宰音)';
+      } else if (!config.voice) {
+        nameText = '👑 原生中文男声 (深沉基底)';
       }
     }
 
     if (ttsVoiceTitle) {
       ttsVoiceTitle.textContent = `声线：${nameText}`;
-      ttsVoiceTitle.title = config.voice ? `${config.voice.name} (${config.voice.lang})` : nameText;
+      ttsVoiceTitle.title = config.voice ? `${config.voice.name} (${config.voice.lang})` : `${nameText} (系统中文引擎)`;
     }
   }
 
@@ -951,7 +1024,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const config = getActiveVoiceConfig();
     const utterance = new SpeechSynthesisUtterance(speechText);
-    if (config.voice) utterance.voice = config.voice;
+
+    // MANDATORY for mobile & desktop: Always set strict Chinese language tag
+    utterance.lang = config.lang || 'zh-CN';
+
+    // STRICT check: ONLY set utterance.voice if it is verified Chinese.
+    // If null, mobile OS (iOS Safari/Android Chrome) routes to its native Chinese speech synthesizer.
+    if (config.voice && isChineseVoice(config.voice)) {
+      utterance.voice = config.voice;
+    }
+
     utterance.rate = config.rate;
     utterance.pitch = config.pitch;
 

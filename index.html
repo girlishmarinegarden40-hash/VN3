@@ -42,6 +42,7 @@
         <a href="#schedule" class="nav-link"><span>📅</span> 四周排期</a>
         <a href="#cg" class="nav-link"><span>🎨</span> 名场面CG</a>
         <a href="#lore" class="nav-link"><span>📜</span> 世界观设定</a>
+        <a href="#settings" class="nav-link" id="navSettingsLink"><span>⚙️</span> 语音设置</a>
       </nav>
 
       <!-- Header Action Items -->
@@ -146,6 +147,7 @@
       </div>
     </section>
 
+
     <!-- Immersive Novel Reader Section -->
     <section id="reader" class="reader-section">
       <div class="section-header">
@@ -190,6 +192,9 @@
               <button class="toolbar-btn btn-tts-trigger" id="toolbarTtsBtn" title="开启AI智能语音朗读">
                 <span class="tts-btn-icon">🎧</span> <span id="toolbarTtsLabel">语音朗读</span>
               </button>
+              <a href="#settings" class="toolbar-btn btn-settings-trigger" id="toolbarVoiceSettingsBtn" title="打开语音设置与完整声线列表">
+                <span>⚙️</span> <span class="hide-mobile">语音设置</span>
+              </a>
               <button class="toolbar-btn" id="fontDecBtn" title="缩小字号">A-</button>
               <span id="fontValLabel" style="font-size:0.8rem;color:var(--text-muted);min-width:34px;text-align:center;">18px</span>
               <button class="toolbar-btn" id="fontIncBtn" title="放大字号">A+</button>
@@ -212,6 +217,7 @@
         </div>
       </div>
     </section>
+
 
     <!-- Character Archive Section -->
     <section id="characters" class="character-section">
@@ -249,6 +255,7 @@
       </div>
     </section>
 
+
     <!-- Schedule Matrix Section -->
     <section id="schedule" class="schedule-section">
       <div class="section-header">
@@ -273,6 +280,7 @@
       </div>
     </section>
 
+
     <!-- Scene CG Storyboards Section -->
     <section id="cg" class="cg-section">
       <div class="section-header">
@@ -285,6 +293,7 @@
         <!-- Dynamically rendered CG cards -->
       </div>
     </section>
+
 
     <!-- Lore & Worldbuilding Section -->
     <section id="lore" class="lore-section">
@@ -329,6 +338,173 @@
             <li><strong>真神本源 (800~1500)</strong>：八位神明妻子执掌法则本源（莉莉丝、卡娅莉丝、伊琳娜等）。</li>
             <li><strong>多元主宰 (99999+)</strong>：奥尔多斯与奥尔黛丝，全知全能，轻打响指即可重构万象时空。</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Voice Synthesis & System Settings Section -->
+    <section id="settings" class="settings-section">
+      <div class="section-header">
+        <span class="section-tag">VOICE SYNTHESIS & SYSTEM SETTINGS</span>
+        <h2 class="section-title">⚙️ 手机与系统语音朗读设置</h2>
+        <p class="section-desc">列出本机全部发音人完整列表 · 支持即时试听、语速与音调调节 · 保存后全书朗读自动生效</p>
+      </div>
+
+      <!-- Active Voice Status Banner -->
+      <div class="settings-active-card">
+        <div class="active-voice-info">
+          <div class="active-voice-badge">
+            <span class="pulse-indicator"></span>
+            <span id="activeVoiceBadgeText">当前朗读声线：👑 奥尔多斯·沉稳男声</span>
+          </div>
+          <div class="active-voice-details" id="activeVoiceDetailsText">
+            发音引擎: 系统智能优选 ｜ 语言代码: zh-CN ｜ 语速: 1.0x ｜ 音调: 1.0
+          </div>
+        </div>
+        <div class="active-voice-actions">
+          <button type="button" class="btn-settings-primary" id="settingsSaveVoiceBtn" title="保存选定声线、语速与音调为全书朗读配置">
+            <span>💾</span> 保存并应用声线
+          </button>
+          <a href="#reader" class="btn-settings-secondary" id="settingsJumpToReaderBtn" title="前往小说阅读器立即聆听">
+            <span>📖</span> 立即前往小说朗读
+          </a>
+        </div>
+      </div>
+
+      <!-- Voice Test & Parameter Customization Console -->
+      <div class="settings-controls-card">
+        <div class="controls-card-header">
+          <h3><span>🎛️</span> 试听控制台与参数调节</h3>
+          <span class="controls-subtitle">测试当前选中发音人的音色与语感，调整满意后点击保存</span>
+        </div>
+
+        <!-- Test phrase input -->
+        <div class="test-phrase-group">
+          <label for="voiceTestPhraseInput" class="settings-label">
+            <span>🗣️ 试听台词预览 (可自定义输入)：</span>
+          </label>
+          <div class="test-input-wrapper">
+            <input
+              type="text"
+              id="voiceTestPhraseInput"
+              class="settings-input"
+              value="奥尔多斯·冯·阿斯特雷亚，欢迎来到公爵府。弱水三千，唯爱八人。"
+              placeholder="输入任意台词或小说段落进行试听..."
+              aria-label="自定义试听台词"
+            />
+            <button type="button" class="btn-test-play-main" id="testPlayCurrentVoiceBtn" title="播放试听当前选中的声线">
+              <span id="testPlayMainIcon">▶</span> <span id="testPlayMainText">试听声线</span>
+            </button>
+            <button type="button" class="btn-test-stop" id="testStopBtn" title="停止试听发音">
+              <span>⏹</span> 停止
+            </button>
+          </div>
+
+          <!-- Quick preset dialogue phrases -->
+          <div class="quick-phrase-chips">
+            <span class="chips-label">快捷小说台词：</span>
+            <button type="button" class="phrase-chip active" data-phrase="奥尔多斯·冯·阿斯特雷亚，欢迎来到公爵府。弱水三千，唯爱八人。">👑 主角开局</button>
+            <button type="button" class="phrase-chip" data-phrase="奥尔多斯……无论轮回多少次，莉莉丝的圣光都只为你一人而亮。">✨ 莉莉丝真情</button>
+            <button type="button" class="phrase-chip" data-phrase="哼，凡俗的蝼蚁，在本王眼中，唯有你配与我执掌这片深渊。">🖤 卡娅莉丝女王</button>
+            <button type="button" class="phrase-chip" data-phrase="你在绝望之地闭关的那一年，父皇死在我怀里，我一个人在满朝文武面前把王冠戴上。">🗡️ 艾莉西亚誓约</button>
+            <button type="button" class="phrase-chip" data-phrase="以因果律双生之名，所有背叛与抹除的命运，皆于此刻彻底逆转！">⚡ 因果律终战</button>
+          </div>
+        </div>
+
+        <!-- Sliders: Rate & Pitch -->
+        <div class="sliders-row">
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="settingsRateSlider" class="settings-label">朗读语速 (Speed)</label>
+              <span class="slider-value-badge" id="rateValueBadge">1.0x (标准)</span>
+            </div>
+            <input type="range" id="settingsRateSlider" class="settings-slider" min="0.5" max="2.0" step="0.1" value="1.0" aria-label="朗读语速" />
+            <div class="slider-markers">
+              <span>0.5x 慢速</span>
+              <span>1.0x 标准</span>
+              <span>1.5x 畅听</span>
+              <span>2.0x 疾速</span>
+            </div>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="settingsPitchSlider" class="settings-label">朗读音调 (Pitch)</label>
+              <span class="slider-value-badge" id="pitchValueBadge">1.0 (自然)</span>
+            </div>
+            <input type="range" id="settingsPitchSlider" class="settings-slider" min="0.5" max="1.5" step="0.05" value="1.0" aria-label="朗读音调" />
+            <div class="slider-markers">
+              <span>0.5 深沉</span>
+              <span>0.9 男主沉稳</span>
+              <span>1.0 标准</span>
+              <span>1.2 女神清甜</span>
+              <span>1.5 极高</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice Library: Complete Voice List with Filters & Search -->
+      <div class="voice-library-card">
+        <div class="library-header">
+          <div class="library-title-group">
+            <h3><span>📋</span> 本机全部发音人完整列表</h3>
+            <span class="voice-count-badge" id="voiceTotalCountBadge">扫描发音引擎中...</span>
+          </div>
+          <p class="library-desc">
+            列出当前手机/电脑浏览器与操作系统已安装的<strong>全部语音</strong>。点击任意声线卡片的<strong>「▶ 试听」</strong>按钮可直接播放试听，点击<strong>「✓ 选择」</strong>后点击上方<strong>「💾 保存并应用声线」</strong>即可在阅读小说时使用该声音朗读。
+          </p>
+        </div>
+
+        <!-- Search and Category Filters -->
+        <div class="voice-filter-toolbar">
+          <div class="search-box-wrapper">
+            <input
+              type="search"
+              id="settingsVoiceSearch"
+              class="settings-search-input"
+              placeholder="🔍 搜索声线名称、语言代码 (如 zh, 普通话, 云希, 晓晓, Siri, Google)..."
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-label="搜索声线名称或语言"
+            />
+            <button type="button" class="btn-clear-search hidden" id="clearVoiceSearchBtn" title="清空搜索">✕</button>
+          </div>
+
+          <div class="voice-filter-chips" role="tablist" aria-label="声线分类筛选">
+            <button type="button" class="voice-filter-btn active" data-filter="all">全部声音 (<span id="countAll">0</span>)</button>
+            <button type="button" class="voice-filter-btn" data-filter="chinese">🇨🇳 中文 (<span id="countZh">0</span>)</button>
+            <button type="button" class="voice-filter-btn" data-filter="male">👑 沉稳男声 (<span id="countMale">0</span>)</button>
+            <button type="button" class="voice-filter-btn" data-filter="female">✨ 空灵女声 (<span id="countFemale">0</span>)</button>
+            <button type="button" class="voice-filter-btn" data-filter="other">🌐 外语/其他 (<span id="countOther">0</span>)</button>
+          </div>
+        </div>
+
+        <!-- Voice Grid / Card Container -->
+        <div class="voice-cards-grid" id="settingsVoiceListContainer">
+          <div class="voice-loading-state">
+            <div class="loading-spinner"></div>
+            <p>正在获取手机系统与浏览器发音人列表...</p>
+          </div>
+        </div>
+
+        <!-- Mobile Voice Installation & Troubleshooting Guide -->
+        <div class="mobile-tts-tip-box">
+          <div class="tip-header">
+            <span>📱</span>
+            <h4>手机端如何获取更多高质量高保真中文声线？</h4>
+          </div>
+          <div class="tip-content-grid">
+            <div class="tip-col">
+              <h5>🍎 苹果 iPhone (iOS) 用户：</h5>
+              <p>进入手机【设置】➜【辅助功能】➜【朗读内容】➜【声音】➜【中文】，免费下载<strong>「普通话 - 婷婷 (增强/自然)」</strong>或 Siri 语音包，返回本页刷新即可在此列表中选用！</p>
+            </div>
+            <div class="tip-col">
+              <h5>🤖 安卓 Android 手机用户：</h5>
+              <p>进入手机【设置】➜ 搜索【文字转语音】或【TTS】➜ 选择【Google 语音服务】或厂商自带引擎，下载中文离线语音包。推荐使用移动版 Chrome 或 Edge 畅享超高清发音效果！</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -466,7 +642,8 @@
         </select>
       </div>
 
-      <!-- Action Buttons: Help & Close -->
+      <!-- Action Buttons: Settings, Help & Close -->
+      <a href="#settings" class="btn-tts-settings" id="ttsOpenSettingsBtn" title="打开完整语音设置与声线试听" aria-label="打开完整语音设置">⚙️</a>
       <button class="btn-tts-help" id="ttsHelpBtn" title="手机发音指南与排查" aria-label="发音帮助">❓</button>
       <button class="btn-tts-close" id="ttsCloseBtn" title="收起播放器" aria-label="收起播放器">✕</button>
     </div>
@@ -509,6 +686,7 @@
         <a href="#schedule">四周排期</a>
         <a href="#cg">名场面CG</a>
         <a href="#lore">设定集</a>
+        <a href="#settings">语音设置</a>
       </div>
 
       <div class="footer-copyright">

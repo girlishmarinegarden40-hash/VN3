@@ -110,6 +110,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const ttsHelpModal = document.getElementById('ttsHelpModal');
   const closeTtsHelpBtn = document.getElementById('closeTtsHelpBtn');
 
+  // Settings Tab & Voice Customization Elements
+  const settingsSaveVoiceBtn = document.getElementById('settingsSaveVoiceBtn');
+  const settingsJumpToReaderBtn = document.getElementById('settingsJumpToReaderBtn');
+  const voiceTestPhraseInput = document.getElementById('voiceTestPhraseInput');
+  const testPlayCurrentVoiceBtn = document.getElementById('testPlayCurrentVoiceBtn');
+  const testPlayMainIcon = document.getElementById('testPlayMainIcon');
+  const testPlayMainText = document.getElementById('testPlayMainText');
+  const testStopBtn = document.getElementById('testStopBtn');
+  const settingsRateSlider = document.getElementById('settingsRateSlider');
+  const rateValueBadge = document.getElementById('rateValueBadge');
+  const settingsPitchSlider = document.getElementById('settingsPitchSlider');
+  const pitchValueBadge = document.getElementById('pitchValueBadge');
+  const settingsVoiceSearch = document.getElementById('settingsVoiceSearch');
+  const clearVoiceSearchBtn = document.getElementById('clearVoiceSearchBtn');
+  const settingsVoiceListContainer = document.getElementById('settingsVoiceListContainer');
+  const voiceTotalCountBadge = document.getElementById('voiceTotalCountBadge');
+  const activeVoiceBadgeText = document.getElementById('activeVoiceBadgeText');
+  const activeVoiceDetailsText = document.getElementById('activeVoiceDetailsText');
+  const countAll = document.getElementById('countAll');
+  const countZh = document.getElementById('countZh');
+  const countMale = document.getElementById('countMale');
+  const countFemale = document.getElementById('countFemale');
+  const countOther = document.getElementById('countOther');
+
   // TTS State
   const ttsState = {
     supported: 'speechSynthesis' in window,
@@ -117,12 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
     isPaused: false,
     mode: localStorage.getItem('astrea_tts_mode') || 'male', // 'male' | 'female' | 'custom'
     rate: parseFloat(localStorage.getItem('astrea_tts_rate') || '1.0'),
+    pitch: parseFloat(localStorage.getItem('astrea_tts_pitch') || '1.0'),
     selectedVoiceURI: localStorage.getItem('astrea_tts_voice_uri') || 'auto',
     currentParaIndex: 0,
     currentUtterance: null,
+    previewPlayingVoiceURI: null,
+    previewUtterance: null,
     voices: [],
     maleVoices: [],
-    femaleVoices: []
+    femaleVoices: [],
+    activeFilter: 'all',
+    searchQuery: ''
   };
 
   // ==========================================
@@ -771,10 +800,22 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  // Populate system voices & classify into Male / Goddess
+  function getVoiceRoleLabel(v) {
+    if (isMaleVoice(v)) return '👑 沉稳男声 (奥尔多斯)';
+    if (isFemaleVoice(v)) return '✨ 空灵女神 (神明娇妻)';
+    if (isChineseVoice(v)) return '🎙️ 中文自然音';
+    return '🌐 外语发音';
+  }
+
+  function getVoiceTypeLabel(v) {
+    return v.localService ? '⚡ 本地系统' : '☁️ 高清在线';
+  }
+
+  // Populate system voices & classify into Male / Goddess / Full Settings List
   function initTTSVoices() {
     if (!ttsState.supported) {
       if (toolbarTtsBtn) toolbarTtsBtn.title = '当前浏览器暂不支持语音合成';
+      renderSettingsVoiceList();
       return;
     }
 
@@ -783,16 +824,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!all || all.length === 0) return;
       ttsState.voices = all;
 
-      // STRICTLY Filter ONLY Chinese voices to prevent English phoneme reading on mobile!
+      // Filter Chinese voices
       const zhVoices = all.filter(isChineseVoice);
 
-      // Categorize into Male (男声) strictly from Chinese voices
+      // Categorize into Male (男声)
       ttsState.maleVoices = zhVoices.filter(isMaleVoice);
 
-      // Categorize into Goddess / Female (女神音) strictly from Chinese voices
+      // Categorize into Goddess / Female (女神音)
       ttsState.femaleVoices = zhVoices.filter(isFemaleVoice);
 
-      // Populate voice select dropdown strictly with Chinese voices
+      // Populate voice select dropdown
       if (ttsVoiceSelect) {
         ttsVoiceSelect.innerHTML = `<option value="auto">🎙️ 自动最优系统声线</option>`;
         if (zhVoices.length === 0) {
@@ -822,6 +863,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (voiceFemaleBtn) voiceFemaleBtn.classList.toggle('active', ttsState.mode === 'female');
 
       updateVoiceLabel();
+      updateSettingsActiveBanner();
+      renderSettingsVoiceList();
     };
 
     loadVoices();
@@ -833,18 +876,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get active voice configuration (voice object, pitch, rate, lang)
   function getActiveVoiceConfig() {
     let chosenVoice = null;
-    let pitch = 1.0;
+    let pitch = ttsState.pitch || 1.0;
+    let rate = ttsState.rate || 1.0;
 
-    const zhVoices = ttsState.voices.filter(isChineseVoice);
-
-    if (ttsState.mode === 'custom' && ttsState.selectedVoiceURI !== 'auto' && ttsState.selectedVoiceURI !== 'system-native-zh') {
+    // 1. If user explicitly selected a voice in Settings
+    if (ttsState.selectedVoiceURI && ttsState.selectedVoiceURI !== 'auto' && ttsState.selectedVoiceURI !== 'system-native-zh') {
       const match = ttsState.voices.find(v => (v.voiceURI || v.name) === ttsState.selectedVoiceURI);
-      if (match && isChineseVoice(match)) {
+      if (match) {
         chosenVoice = match;
       }
     }
 
+    // 2. If no custom voice matched, fall back to male or goddess mode
     if (!chosenVoice) {
+      const zhVoices = ttsState.voices.filter(isChineseVoice);
       if (ttsState.mode === 'female') {
         // Goddess mode: prioritize best natural female voice
         chosenVoice = ttsState.femaleVoices[0] ||
@@ -862,23 +907,41 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // STRICT SANITY CHECK: Never return a non-Chinese voice!
-    if (chosenVoice && !isChineseVoice(chosenVoice)) {
-      chosenVoice = null;
-    }
-
-    // Determine strict BCP-47 language tag (e.g. zh-CN)
+    // Determine language tag
     let lang = 'zh-CN';
-    if (chosenVoice && chosenVoice.lang && isChineseVoice(chosenVoice)) {
+    if (chosenVoice && chosenVoice.lang) {
       lang = chosenVoice.lang.replace(/_/g, '-');
     }
 
     return {
       voice: chosenVoice,
       pitch,
-      rate: ttsState.rate,
+      rate,
       lang
     };
+  }
+
+  // Update active voice banner in Settings Tab
+  function updateSettingsActiveBanner() {
+    if (!activeVoiceBadgeText || !activeVoiceDetailsText) return;
+
+    const config = getActiveVoiceConfig();
+    const voice = config.voice;
+    let displayName = '👑 奥尔多斯·沉稳男声';
+    if (voice) {
+      displayName = `🎙️ ${voice.name}`;
+    } else if (ttsState.mode === 'female') {
+      displayName = '✨ 神明娇妻·空灵女神音';
+    }
+
+    activeVoiceBadgeText.textContent = `当前朗读声线：${displayName}`;
+
+    const langText = config.lang || 'zh-CN';
+    const rateText = `${ttsState.rate.toFixed(1)}x`;
+    const pitchText = `${ttsState.pitch.toFixed(2)}`;
+    const engineText = voice ? (voice.localService ? '本机系统引擎' : '云端高保真引擎') : '系统智能优选';
+
+    activeVoiceDetailsText.textContent = `发音引擎: ${engineText} ｜ 语言代码: ${langText} ｜ 语速: ${rateText} ｜ 音调: ${pitchText}`;
   }
 
   // Update voice display title in player bar
@@ -887,8 +950,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let nameText = '👑 沉稳男声 (奥尔多斯)';
     if (ttsState.mode === 'female') {
       nameText = '✨ 空灵女神 (神明娇妻)';
-    } else if (ttsState.mode === 'custom') {
-      nameText = config.voice ? `🎙️ ${config.voice.name.slice(0, 16)}` : '🎙️ 自定义声线';
+    } else if (ttsState.mode === 'custom' && config.voice) {
+      nameText = `🎙️ ${config.voice.name.slice(0, 16)}`;
     } else {
       if (config.voice && (config.voice.name.includes('Yunxi') || config.voice.name.includes('云希'))) {
         nameText = '👑 微软云希 (沉稳主角音)';
@@ -903,6 +966,266 @@ document.addEventListener('DOMContentLoaded', () => {
       ttsVoiceTitle.textContent = `声线：${nameText}`;
       ttsVoiceTitle.title = config.voice ? `${config.voice.name} (${config.voice.lang})` : `${nameText} (系统中文引擎)`;
     }
+  }
+
+  // Render Full Voice List in Settings Tab
+  function renderSettingsVoiceList() {
+    if (!settingsVoiceListContainer) return;
+
+    if (!ttsState.supported) {
+      settingsVoiceListContainer.innerHTML = `
+        <div class="voice-empty-state">
+          <p>⚠️ 当前浏览器暂不支持 SpeechSynthesis 语音合成引擎，推荐在移动端使用 Chrome 或 Safari 打开。</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (!ttsState.voices || ttsState.voices.length === 0) {
+      settingsVoiceListContainer.innerHTML = `
+        <div class="voice-loading-state">
+          <div class="loading-spinner"></div>
+          <p>正在检索手机系统发音人... 若长时间未列出，请点击任意位置激活浏览器音频授权。</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Filter by category
+    let list = ttsState.voices.filter(v => {
+      if (ttsState.activeFilter === 'all') return true;
+      if (ttsState.activeFilter === 'chinese') return isChineseVoice(v);
+      if (ttsState.activeFilter === 'male') return isMaleVoice(v);
+      if (ttsState.activeFilter === 'female') return isFemaleVoice(v);
+      if (ttsState.activeFilter === 'other') return !isChineseVoice(v);
+      return true;
+    });
+
+    // Filter by search query
+    if (ttsState.searchQuery) {
+      const q = ttsState.searchQuery.toLowerCase();
+      list = list.filter(v => {
+        const name = (v.name || '').toLowerCase();
+        const lang = (v.lang || '').toLowerCase();
+        const role = getVoiceRoleLabel(v).toLowerCase();
+        return name.includes(q) || lang.includes(q) || role.includes(q);
+      });
+    }
+
+    // Update count badges
+    if (countAll) countAll.textContent = ttsState.voices.length;
+    if (countZh) countZh.textContent = ttsState.voices.filter(isChineseVoice).length;
+    if (countMale) countMale.textContent = ttsState.voices.filter(isMaleVoice).length;
+    if (countFemale) countFemale.textContent = ttsState.voices.filter(isFemaleVoice).length;
+    if (countOther) countOther.textContent = ttsState.voices.filter(v => !isChineseVoice(v)).length;
+    if (voiceTotalCountBadge) {
+      voiceTotalCountBadge.textContent = `共 ${ttsState.voices.length} 个发音人 (当前显示 ${list.length})`;
+    }
+
+    if (list.length === 0) {
+      settingsVoiceListContainer.innerHTML = `
+        <div class="voice-empty-state">
+          <p>🔍 没有找到匹配「${ttsState.searchQuery || ttsState.activeFilter}」的发音人，请尝试切换其他分类或重置搜索词。</p>
+        </div>
+      `;
+      return;
+    }
+
+    settingsVoiceListContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    list.forEach(v => {
+      const uri = v.voiceURI || v.name;
+      const isSelected = uri === ttsState.selectedVoiceURI;
+      const isPreviewing = uri === ttsState.previewPlayingVoiceURI;
+      const roleLabel = getVoiceRoleLabel(v);
+      const typeLabel = getVoiceTypeLabel(v);
+
+      const card = document.createElement('div');
+      card.className = `voice-card-item${isSelected ? ' selected' : ''}${isPreviewing ? ' previewing' : ''}`;
+      card.dataset.uri = uri;
+
+      card.innerHTML = `
+        <div class="voice-card-top">
+          <div class="voice-card-title-row">
+            <div class="voice-card-name" title="${v.name}">${v.name}</div>
+            ${isSelected ? '<span class="voice-active-tag">✓ 当前选用</span>' : ''}
+          </div>
+          <div class="voice-card-badges">
+            <span class="voice-badge voice-badge-lang">${v.lang || '未知'}</span>
+            <span class="voice-badge voice-badge-role">${roleLabel}</span>
+            <span class="voice-badge voice-badge-type">${typeLabel}</span>
+          </div>
+        </div>
+        <div class="voice-card-bottom">
+          <div class="voice-card-actions">
+            <button type="button" class="btn-card-preview${isPreviewing ? ' playing' : ''}" data-action="preview" data-uri="${uri}" title="试听该声线发音">
+              ${isPreviewing
+                ? '<span class="wave-mini"><span class="wave-mini-bar"></span><span class="wave-mini-bar"></span><span class="wave-mini-bar"></span></span> ⏹ 停止'
+                : '<span>▶</span> 试听'
+              }
+            </button>
+            <button type="button" class="btn-card-select" data-action="select" data-uri="${uri}" title="选择该发音人">
+              ${isSelected ? '✓ 已选用' : '✓ 选择此声线'}
+            </button>
+          </div>
+        </div>
+      `;
+
+      fragment.appendChild(card);
+    });
+
+    settingsVoiceListContainer.appendChild(fragment);
+  }
+
+  // Preview Voice Function (independent audio preview)
+  function previewVoice(voiceURI, sampleText) {
+    if (!ttsState.supported) {
+      showToast('⚠️ 当前浏览器不支持语音合成，推荐使用 Chrome 或 Edge');
+      return;
+    }
+
+    if (ttsState.previewPlayingVoiceURI === voiceURI) {
+      window.speechSynthesis.cancel();
+      ttsState.previewPlayingVoiceURI = null;
+      updatePreviewButtonsUI();
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    if (ttsState.isPlaying) {
+      ttsState.isPaused = true;
+      updateTTSPlayerUI();
+    }
+
+    const targetVoice = ttsState.voices.find(v => (v.voiceURI || v.name) === voiceURI);
+    const textToSpeak = cleanTextForSpeech(
+      sampleText ||
+      (voiceTestPhraseInput ? voiceTestPhraseInput.value : '') ||
+      '奥尔多斯·冯·阿斯特雷亚，欢迎来到公爵府。弱水三千，唯爱八人。'
+    );
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    if (targetVoice) {
+      utterance.voice = targetVoice;
+      utterance.lang = targetVoice.lang || 'zh-CN';
+    } else {
+      utterance.lang = 'zh-CN';
+    }
+    utterance.rate = ttsState.rate;
+    utterance.pitch = ttsState.pitch;
+
+    utterance.onstart = () => {
+      ttsState.previewPlayingVoiceURI = voiceURI;
+      updatePreviewButtonsUI();
+    };
+
+    utterance.onend = () => {
+      ttsState.previewPlayingVoiceURI = null;
+      updatePreviewButtonsUI();
+    };
+
+    utterance.onerror = () => {
+      ttsState.previewPlayingVoiceURI = null;
+      updatePreviewButtonsUI();
+    };
+
+    ttsState.previewUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Update preview buttons status across UI
+  function updatePreviewButtonsUI() {
+    if (testPlayCurrentVoiceBtn && testPlayMainIcon && testPlayMainText) {
+      const isCurrentTesting = Boolean(ttsState.previewPlayingVoiceURI);
+      if (isCurrentTesting) {
+        testPlayMainIcon.textContent = '⏹';
+        testPlayMainText.textContent = '停止试听';
+        testPlayCurrentVoiceBtn.classList.add('playing');
+      } else {
+        testPlayMainIcon.textContent = '▶';
+        testPlayMainText.textContent = '试听声线';
+        testPlayCurrentVoiceBtn.classList.remove('playing');
+      }
+    }
+
+    if (settingsVoiceListContainer) {
+      settingsVoiceListContainer.querySelectorAll('.voice-card-item').forEach(card => {
+        const uri = card.dataset.uri;
+        const isPreviewing = uri === ttsState.previewPlayingVoiceURI;
+        card.classList.toggle('previewing', isPreviewing);
+
+        const pBtn = card.querySelector('.btn-card-preview');
+        if (pBtn) {
+          pBtn.classList.toggle('playing', isPreviewing);
+          if (isPreviewing) {
+            pBtn.innerHTML = '<span class="wave-mini"><span class="wave-mini-bar"></span><span class="wave-mini-bar"></span><span class="wave-mini-bar"></span></span> ⏹ 停止';
+          } else {
+            pBtn.innerHTML = '<span>▶</span> 试听';
+          }
+        }
+      });
+    }
+  }
+
+  // Select a voice from card
+  function selectVoice(voiceURI) {
+    ttsState.selectedVoiceURI = voiceURI;
+    const match = ttsState.voices.find(v => (v.voiceURI || v.name) === voiceURI);
+
+    if (settingsVoiceListContainer) {
+      settingsVoiceListContainer.querySelectorAll('.voice-card-item').forEach(card => {
+        const isSelected = card.dataset.uri === voiceURI;
+        card.classList.toggle('selected', isSelected);
+        const titleRow = card.querySelector('.voice-card-title-row');
+        const activeTag = card.querySelector('.voice-active-tag');
+        if (isSelected && !activeTag && titleRow) {
+          const tag = document.createElement('span');
+          tag.className = 'voice-active-tag';
+          tag.textContent = '✓ 当前选用';
+          titleRow.appendChild(tag);
+        } else if (!isSelected && activeTag) {
+          activeTag.remove();
+        }
+
+        const selBtn = card.querySelector('.btn-card-select');
+        if (selBtn) {
+          selBtn.textContent = isSelected ? '✓ 已选用' : '✓ 选择此声线';
+        }
+      });
+    }
+
+    if (ttsVoiceSelect && voiceURI) {
+      ttsVoiceSelect.value = voiceURI;
+    }
+
+    updateSettingsActiveBanner();
+    const voiceName = match ? match.name : voiceURI;
+    showToast(`🎙️ 已选定：${voiceName}，点击「保存并应用声线」即可全面生效`);
+  }
+
+  // Save Voice Settings permanently
+  function saveVoiceSettings() {
+    localStorage.setItem('astrea_tts_voice_uri', ttsState.selectedVoiceURI);
+    localStorage.setItem('astrea_tts_rate', ttsState.rate.toString());
+    localStorage.setItem('astrea_tts_pitch', ttsState.pitch.toString());
+    ttsState.mode = 'custom';
+    localStorage.setItem('astrea_tts_mode', 'custom');
+
+    if (voiceMaleBtn) voiceMaleBtn.classList.remove('active');
+    if (voiceFemaleBtn) voiceFemaleBtn.classList.remove('active');
+
+    updateSettingsActiveBanner();
+    updateVoiceLabel();
+    renderSettingsVoiceList();
+
+    if (ttsState.isPlaying && !ttsState.isPaused) {
+      playParagraph(ttsState.currentParaIndex);
+    }
+
+    const config = getActiveVoiceConfig();
+    const voiceName = config.voice ? config.voice.name : '系统原生发音';
+    showToast(`🎉 声线已成功保存！小说朗读将全面使用【${voiceName}】`);
   }
 
   // Update TTS Player UI widgets
@@ -1025,13 +1348,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = getActiveVoiceConfig();
     const utterance = new SpeechSynthesisUtterance(speechText);
 
-    // MANDATORY for mobile & desktop: Always set strict Chinese language tag
-    utterance.lang = config.lang || 'zh-CN';
-
-    // STRICT check: ONLY set utterance.voice if it is verified Chinese.
-    // If null, mobile OS (iOS Safari/Android Chrome) routes to its native Chinese speech synthesizer.
-    if (config.voice && isChineseVoice(config.voice)) {
+    // If explicit voice is matched, set voice and its native language
+    if (config.voice) {
       utterance.voice = config.voice;
+      utterance.lang = config.voice.lang || config.lang || 'zh-CN';
+    } else {
+      utterance.lang = config.lang || 'zh-CN';
     }
 
     utterance.rate = config.rate;
@@ -1223,6 +1545,157 @@ document.addEventListener('DOMContentLoaded', () => {
       stopTTS();
       ttsPlayerBar.classList.add('hidden');
       showToast('语音播放器已收起');
+    });
+  }
+
+  // ==========================================
+  // Settings Tab Event Listeners & Sliders
+  // ==========================================
+  if (settingsRateSlider) {
+    settingsRateSlider.value = ttsState.rate.toString();
+    const updateRateUI = () => {
+      ttsState.rate = parseFloat(settingsRateSlider.value);
+      if (rateValueBadge) rateValueBadge.textContent = `${ttsState.rate.toFixed(1)}x`;
+      if (ttsRateSelect) ttsRateSelect.value = ttsState.rate.toString();
+      updateSettingsActiveBanner();
+    };
+    settingsRateSlider.addEventListener('input', updateRateUI);
+    settingsRateSlider.addEventListener('change', () => {
+      localStorage.setItem('astrea_tts_rate', ttsState.rate.toString());
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        playParagraph(ttsState.currentParaIndex);
+      }
+    });
+    updateRateUI();
+  }
+
+  if (settingsPitchSlider) {
+    settingsPitchSlider.value = ttsState.pitch.toString();
+    const updatePitchUI = () => {
+      ttsState.pitch = parseFloat(settingsPitchSlider.value);
+      if (pitchValueBadge) pitchValueBadge.textContent = `${ttsState.pitch.toFixed(2)}`;
+      updateSettingsActiveBanner();
+    };
+    settingsPitchSlider.addEventListener('input', updatePitchUI);
+    settingsPitchSlider.addEventListener('change', () => {
+      localStorage.setItem('astrea_tts_pitch', ttsState.pitch.toString());
+      if (ttsState.isPlaying && !ttsState.isPaused) {
+        playParagraph(ttsState.currentParaIndex);
+      }
+    });
+    updatePitchUI();
+  }
+
+  // Preset phrase chips
+  document.querySelectorAll('.phrase-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.phrase-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      if (voiceTestPhraseInput) {
+        voiceTestPhraseInput.value = chip.dataset.phrase || '';
+      }
+      if (ttsState.previewPlayingVoiceURI) {
+        previewVoice(ttsState.previewPlayingVoiceURI, chip.dataset.phrase);
+      }
+    });
+  });
+
+  if (testPlayCurrentVoiceBtn) {
+    testPlayCurrentVoiceBtn.addEventListener('click', () => {
+      if (ttsState.previewPlayingVoiceURI) {
+        window.speechSynthesis.cancel();
+        ttsState.previewPlayingVoiceURI = null;
+        updatePreviewButtonsUI();
+      } else {
+        const config = getActiveVoiceConfig();
+        const targetURI = config.voice ? (config.voice.voiceURI || config.voice.name) : (ttsState.selectedVoiceURI || 'auto');
+        previewVoice(targetURI, voiceTestPhraseInput ? voiceTestPhraseInput.value : '');
+      }
+    });
+  }
+
+  if (testStopBtn) {
+    testStopBtn.addEventListener('click', () => {
+      window.speechSynthesis.cancel();
+      ttsState.previewPlayingVoiceURI = null;
+      updatePreviewButtonsUI();
+      showToast('⏹ 试听已停止');
+    });
+  }
+
+  // Settings Voice Search
+  if (settingsVoiceSearch) {
+    settingsVoiceSearch.addEventListener('input', (e) => {
+      ttsState.searchQuery = e.target.value.trim();
+      if (clearVoiceSearchBtn) {
+        clearVoiceSearchBtn.classList.toggle('hidden', !ttsState.searchQuery);
+      }
+      renderSettingsVoiceList();
+    });
+  }
+
+  if (clearVoiceSearchBtn) {
+    clearVoiceSearchBtn.addEventListener('click', () => {
+      if (settingsVoiceSearch) settingsVoiceSearch.value = '';
+      ttsState.searchQuery = '';
+      clearVoiceSearchBtn.classList.add('hidden');
+      renderSettingsVoiceList();
+    });
+  }
+
+  // Voice Filter Chips
+  document.querySelectorAll('.voice-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.voice-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ttsState.activeFilter = btn.dataset.filter || 'all';
+      renderSettingsVoiceList();
+    });
+  });
+
+  // Settings Save Button
+  if (settingsSaveVoiceBtn) {
+    settingsSaveVoiceBtn.addEventListener('click', saveVoiceSettings);
+  }
+
+  // Jump to Reader Button
+  if (settingsJumpToReaderBtn) {
+    settingsJumpToReaderBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('reader')?.scrollIntoView({ behavior: 'smooth' });
+      if (!ttsState.isPlaying || ttsState.isPaused) {
+        setTimeout(() => {
+          startTTS(ttsState.currentParaIndex);
+        }, 400);
+      }
+      showToast('📖 已进入小说朗读模式，正在为您朗读！');
+    });
+  }
+
+  // Delegate clicks on Voice Card Grid
+  if (settingsVoiceListContainer) {
+    settingsVoiceListContainer.addEventListener('click', (e) => {
+      const previewBtn = e.target.closest('[data-action="preview"]');
+      if (previewBtn) {
+        e.stopPropagation();
+        const uri = previewBtn.dataset.uri;
+        previewVoice(uri);
+        return;
+      }
+
+      const selectBtn = e.target.closest('[data-action="select"]');
+      if (selectBtn) {
+        e.stopPropagation();
+        const uri = selectBtn.dataset.uri;
+        selectVoice(uri);
+        return;
+      }
+
+      const card = e.target.closest('.voice-card-item');
+      if (card) {
+        const uri = card.dataset.uri;
+        selectVoice(uri);
+      }
     });
   }
 
